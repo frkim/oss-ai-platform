@@ -40,17 +40,20 @@ Ownership boundaries are important:
 
 ## 3. Tool comparison
 
-Protocol, licence, steward and foundation-status claims below are **Unverified (not re-checked in this edit)**. Re-check them with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh), especially for protocol governance, project ownership and sandbox maturity.
+Licences and stars were read from upstream repositories on 2026-10-11 (**Opened**; stars rounded to 0.1k). Foundation statuses are **Search-cited**. Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh). Picks were driven by licence, interoperability (MCP, A2A, OpenTelemetry) and operability (Kubernetes-native lifecycle); all projects below were pushed in the last month except AutoGen (see the note).
 
 | Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
 |------------|--------------|---------------|---------|--------------|----------------|
-| **Tool and resource protocol** | **MCP** | `verify the LICENSE file` for the spec source repository | MCP community / spec maintainers | Framework-specific tool APIs, direct HTTP wrappers, OpenAPI adapters | Choose **MCP** when you want one tool surface that multiple agent frameworks and clients can consume without bespoke adapters |
-| **Agent-to-agent protocol** | **A2A** | `verify the LICENSE file` for the spec source repository | Linux Foundation stewardship **Unverified (not re-checked in this edit)** | Queue-and-worker handoffs, webhooks, direct RPC between services | Choose **A2A** when agents are separately deployed services that need explicit handoff semantics rather than in-process function calls |
-| **Application-level agent runtime** | **LangGraph** | `OSI` ✅ (MIT) | LangChain ecosystem | kagent (`OSI` ✅ Apache-2.0; CNCF Sandbox status **Unverified (not re-checked in this edit)**), internal workflow engine | Choose **LangGraph** when you want explicit state, checkpoints, human approvals and application-controlled execution flow |
-| **Kubernetes-native agent control plane** | **kagent** | `OSI` ✅ (Apache-2.0) | kagent maintainers; CNCF Sandbox status **Unverified (not re-checked in this edit)** | LangGraph (`OSI` ✅ MIT), internal controllers | Choose **kagent** when platform teams want CRDs, cluster-native lifecycle and a shared control plane for many agents |
-| **Sandbox with low friction** | **gVisor** | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`verify the LICENSE file`; project status **Unverified (not re-checked in this edit)**) | Choose **gVisor** when syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM |
-| **Sandbox with stronger VM-style isolation** | **Kata Containers** | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`verify the LICENSE file`) | Choose **Kata Containers** when the side-effecting tools are high risk and the platform can afford the stronger isolation boundary |
-| **MCP gateway layer** | **Thin internal gateway first** | Internal component; no public licence label | Your platform team | Emerging open-source MCP gateways (ecosystem status **Unverified (not re-checked in this edit)**) | Choose a **thin internal gateway** when the MCP gateway landscape is still moving and you mainly need authentication, allow-lists, audit and egress control |
+| **Tool and resource protocol** | **MCP** | `OSI` ✅ (Apache-2.0 for new contributions; legacy contributions remain MIT during a relicensing transition) | Agentic AI Foundation (Linux Foundation), donated by Anthropic in December 2025 (search-cited) | Framework-specific tool APIs, direct HTTP wrappers, OpenAPI adapters | Choose **MCP** when you want one tool surface that multiple agent frameworks and clients can consume without bespoke adapters |
+| **Agent-to-agent protocol** | **A2A** (26.1k★) | `OSI` ✅ (Apache-2.0) | Linux Foundation; joined the Agentic AI Foundation in August 2026 (search-cited) | Queue-and-worker handoffs, webhooks, direct RPC between services | Choose **A2A** when agents are separately deployed services that need explicit handoff semantics rather than in-process function calls |
+| **Application-level agent runtime** | **LangGraph** (43.0k★) | `OSI` ✅ (MIT) | LangChain (company) | CrewAI (`OSI` ✅ MIT; 59.6k★, role-based crews), OpenAI Agents SDK (`OSI` ✅ MIT; 30.0k★, Python), Google ADK (`OSI` ✅ Apache-2.0; 21.8k★), Microsoft Agent Framework (`OSI` ✅ MIT; 14.1k★), internal workflow engine | Choose **LangGraph** when you want explicit state, checkpoints, human approvals and application-controlled execution flow; choose another only for a stack fit (for example ADK on Google tooling, Agent Framework on .NET/Azure) |
+| **Kubernetes-native agent control plane** | **kagent** (4.0k★) | `OSI` ✅ (Apache-2.0) | kagent maintainers; CNCF Sandbox project (landscape) | LangGraph (`OSI` ✅ MIT), internal controllers | Choose **kagent** when platform teams want CRDs, cluster-native lifecycle and a shared control plane for many agents |
+| **Sandbox with low friction** | **gVisor** (19.6k★) | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **gVisor** when syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM |
+| **Sandbox with stronger VM-style isolation** | **Kata Containers** (8.9k★) | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **Kata Containers** when the side-effecting tools are high risk and the platform can afford the stronger isolation boundary |
+| **Per-agent sandbox lifecycle on Kubernetes** | **agent-sandbox** (4.2k★) | `OSI` ✅ (Apache-2.0) | Kubernetes SIGs (`kubernetes-sigs`) | Plain `RuntimeClass` pods (section 5.4), gVisor or Kata underneath | Choose **agent-sandbox** when you need many isolated, stateful, pausable sandboxes created per agent session through a Kubernetes API; it manages lifecycle and sits on top of gVisor or Kata rather than replacing them. Project maturity is **Unverified** |
+| **MCP and agent gateway layer** | **agentgateway** (5.3k★) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Choose **agentgateway** when you want an open MCP/A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one; choose a **thin internal gateway** when you only need an allow-list and audit log. LLM-traffic gateways are owned by [P02](./02-ai-gateway.md) |
+
+Note: Microsoft AutoGen (61.3k★) is in maintenance mode, community-managed and pointing new users to Microsoft Agent Framework (read from its README), so it is not listed as an option. The repository `LICENSE` shows `CC-BY-4.0` for documentation; check the code licence file before reuse.
 
 Default platform stance:
 
@@ -197,17 +200,19 @@ Operational heuristics:
 
 ## 9. Sources
 
-Primary upstreams to re-check:
+Primary upstreams:
 
 - [Model Context Protocol site](https://modelcontextprotocol.io/)
-- [MCP specification repository](https://github.com/modelcontextprotocol/specification)
+- [MCP specification repository](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [A2A repository](https://github.com/a2aproject/A2A)
 - [LangGraph repository](https://github.com/langchain-ai/langgraph)
 - [kagent repository](https://github.com/kagent-dev/kagent)
+- [CrewAI](https://github.com/crewAIInc/crewAI), [OpenAI Agents SDK](https://github.com/openai/openai-agents-python), [Google ADK](https://github.com/google/adk-python), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) and [AutoGen](https://github.com/microsoft/autogen)
+- [agentgateway](https://github.com/agentgateway/agentgateway) and [IBM ContextForge](https://github.com/IBM/mcp-context-forge)
 - [gVisor repository](https://github.com/google/gvisor)
 - [Kata Containers repository](https://github.com/kata-containers/kata-containers)
 - [kubernetes-sigs/agent-sandbox repository](https://github.com/kubernetes-sigs/agent-sandbox)
 - [Kubernetes AI Conformance checklist](https://github.com/cncf/k8s-ai-conformance/blob/main/docs/AIConformance-1.37.yaml)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
 
-All governance, licence and project-status metadata above is **Unverified (not re-checked in this edit)**; refresh it with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+Licences and stars were **Opened** on 2026-10-11; foundation status is **Search-cited**. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).

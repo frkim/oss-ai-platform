@@ -14,7 +14,7 @@ The research answered three questions:
 
 | In scope | Out of scope |
 |----------|--------------|
-| Serving and applying models: gateway, routing, inference, retrieval, agents and tools | Pre-training and fine-tuning pipelines, feature stores, classic MLOps |
+| Serving and applying models: gateway, routing, inference, retrieval, agents and tools | Pre-training and fine-tuning pipelines, feature stores, classic MLOps (see [2.4](#24-deliberate-non-pillars) for this and other scope decisions) |
 | Observability, evaluation, security, governance, reliability, hardening | Evaluating commercial SaaS platforms (named only as "Not OSS — reference only") |
 | The foundation the platform runs on (Kubernetes, networking, GitOps, secrets) | Legal advice, including regulatory interpretation |
 
@@ -53,7 +53,7 @@ The three primary sources were read for *concerns*, not for tools. Each concern 
 | Shrink the platform's own attack surface | Conformance `secure_accelerator_access` (MUST) and `workload_sandboxing` (SHOULD); CNAI "Security and Compliance Audits" | [P11 Hardening](./11-hardening.md) |
 | Run on dependable, reproducible infrastructure | CNAI "Reference Implementation" (calls for an OpenTofu-based starter implementation); Conformance `robust_controller` (MUST); landscape AI Native Infra › Continuous Integration and Delivery | [P12 Foundation](./12-foundation-infrastructure.md) |
 
-Pillar identifiers match file numbers: `P02` is `docs/02-ai-gateway.md`. File `01` is the [reference architecture](./01-reference-architecture.md) that connects the pillars; it is not a pillar.
+Pillar identifiers match file numbers: `P02` is `docs/02-ai-gateway.md`. There is deliberately **no P01**: file `01` is the [reference architecture](./01-reference-architecture.md) that connects the pillars, and file `00` is this methodology. Files `13` to `16` (roadmap, tool landscape, glossary, references) are supporting documents. The eleven pillars are therefore P02 to P12.
 
 ### 2.3 Why capability pillars rather than the well-architected pillars
 
@@ -73,6 +73,15 @@ The AWS and Azure frameworks organise guidance by *quality attribute*: how well 
 - **Model training and fine-tuning.** The CNAI paper and the landscape treat training as a lifecycle stage. This blueprint is about serving and applying models, so it links out instead of covering it. Shared GPU scheduling, which serves both, is covered in [P04](./04-model-serving.md).
 - **Sustainability.** The CNAI paper and the AWS lens both give it a place of its own. Here it is a cross-cutting efficiency concern: right-sizing and utilisation live in [P10](./10-reliability-performance.md), and energy telemetry is an optional add-on (for example Kepler, a CNCF Sandbox project listed under Observability and Analysis › Observability in the landscape) noted in the [tool landscape](./14-tool-landscape.md).
 - **End-user front-ends.** Chat interfaces and IDE assistants are consumers of the gateway. They appear in the [reference architecture](./01-reference-architecture.md) as the experience layer, not as a pillar.
+- **Prompt management.** Prompt versioning and release are touched, not owned: prompts are registered as governed assets ([P09](./09-governance-risk-compliance.md)), regression-tested ([P07](./07-observability-evaluation.md)) and shipped through GitOps ([P12](./12-foundation-infrastructure.md)). Dedicated prompt-management tooling (for example the prompt features of Langfuse) is a possible add-on, not a recommendation.
+- **Multi-tenancy.** Tenancy is a cross-cutting property, not a capability. Keys and quotas per tenant sit in [P02](./02-ai-gateway.md), data isolation in [P05](./05-data-knowledge-rag.md), policy overlays in [P08](./08-security.md) and [P09](./09-governance-risk-compliance.md), and workload isolation in [P11](./11-hardening.md).
+- **FinOps.** Cost accountability is split by owner: metering in [P02](./02-ai-gateway.md), cost allocation and dashboards in [P07](./07-observability-evaluation.md), and the budgeting and chargeback process in [P09](./09-governance-risk-compliance.md).
+- **Developer experience and portals.** Self-service catalogues and developer portals (for example Backstage), SDKs and golden paths are not covered. Self-service infrastructure is limited to Crossplane compositions in [P12](./12-foundation-infrastructure.md).
+- **Data and feature pipelines.** Ingestion for retrieval is covered in [P05](./05-data-knowledge-rag.md). General ETL, data-quality tooling, feature stores and training-data pipelines are out of scope.
+- **Edge and offline.** Edge and on-device inference appear only as a packaging option ([Ollama and llama.cpp in P04](./04-model-serving.md)) and as an air-gapped topology ([reference architecture 4](./01-reference-architecture.md#4-deployment-topologies)). Fleet management of edge devices is out of scope.
+- **Multimodal and speech models.** The blueprint is text-first. The gateway, serving and observability pillars apply to other modalities, but tool choices and guardrails were not evaluated for them.
+
+These are scope decisions, not claims that the topics are unimportant. If one is critical for you, treat the nearest pillar as a starting point and add your own evaluation.
 
 ### 2.5 One owner per topic
 
@@ -184,6 +193,7 @@ Then open the `LICENSE` file itself, because the badge can differ from the file 
 - **Single-day snapshot.** Projects change licences, owners and names. Anything adopted should be re-verified with the commands above.
 - **Mostly secondary evidence outside GitHub.** See [section 4.2](#42-what-could-not-be-reached).
 - **No original benchmarks.** Performance numbers appear only with a cited source and its conditions. Measure your own workload ([P10](./10-reliability-performance.md) describes how).
+- **Fast-decaying project status.** A spot-check of the recommended repositories on the snapshot date found archived or unmaintained projects (LLM Guard, MinIO, Hugging Face TGI, `Azure/PyRIT`) and several moved repositories. They are listed in the [tool landscape](./14-tool-landscape.md#spot-check-findings-2026-10-11); a pillar document that still recommends one of them should be read with that note.
 - **Opinionated shortlists.** A tool that is absent is not necessarily worse.
 - **AI-assisted authoring.** This repository was drafted with AI assistance (parallel research agents) and then reviewed and fact-checked in separate passes. Treat it as a researched starting point, not audited guidance, and open an issue when something is wrong.
 - **Not legal advice.** Licence and regulation summaries are orientation only.
@@ -200,6 +210,7 @@ Opened:
 - [LiteLLM `LICENSE`](https://github.com/BerriAI/litellm/blob/main/LICENSE) and [`enterprise/LICENSE.md`](https://github.com/BerriAI/litellm/blob/main/enterprise/LICENSE.md) — open-core boundary
 - [LiteLLM on PyPI (JSON index)](https://pypi.org/pypi/litellm/json) — package licence metadata
 - [Kepler repository](https://github.com/sustainable-computing-io/kepler) — energy telemetry project referenced in section 2.4
+- GitHub API metadata (licence, archived flag, redirects) for the repositories in the [tool landscape](./14-tool-landscape.md), read on 2026-10-11
 
 Search-cited (could not be opened, accessed 2026-10-11):
 

@@ -35,19 +35,25 @@ Ownership boundaries:
 
 ## 3. Tool comparison
 
-Licences, governance and project-status claims below are **Unverified (not re-checked in this edit)**. Re-check them with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh), especially for OpenTelemetry GenAI conventions, CNCF affiliations and any open-core or source-available boundaries.
+Licences, stars (rounded to 0.1k), push dates and archived flags were read from upstream repositories on 2026-10-11 (**Opened**); CNCF levels come from the CNCF landscape file (**Opened**). Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh). The signals that drove the picks are interoperability (OpenTelemetry first), licence (open-core and source-available boundaries called out) and adoption.
 
 | Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
 |------------|--------------|---------------|---------|--------------|----------------|
-| **Telemetry standard and SDK shape** | **OpenTelemetry** | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF governance **Unverified (not re-checked in this edit)** | OpenLIT (`OSI` ✅ Apache-2.0), vendor SDKs | Choose **OpenTelemetry** when you want vendor-neutral traces, metrics and logs that survive tool changes |
-| **Time-series metrics store** | **Prometheus** | `OSI` ✅ (Apache-2.0) | Prometheus / CNCF governance **Unverified (not re-checked in this edit)** | OpenTelemetry Collector export path, managed metrics backends, OpenCost for cost views | Choose **Prometheus** when Kubernetes and service-level metrics are already core platform concerns |
-| **Dashboards and exploratory analysis** | **Grafana** | `OSI` ✅ (AGPL-3.0) | Grafana Labs | Langfuse UI (`Open-core` ⚠️; `ee/` status **Unverified (not re-checked in this edit)**), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Grafana** when you want one shared dashboard surface across AI and non-AI services and you accept AGPL obligations |
-| **LLM trace and prompt analytics** | **Langfuse** | `Open-core` ⚠️ (MIT core reported; verify `ee/` boundaries) | Langfuse | OpenLIT (`OSI` ✅ Apache-2.0), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Langfuse** when you want a purpose-built LLM observability UI and the open-core boundary is acceptable after verification |
-| **Open instrumentation starter for LLM apps** | **OpenLIT** | `OSI` ✅ (Apache-2.0) | OpenLIT maintainers | OpenTelemetry (`OSI` ✅ Apache-2.0), Langfuse (`Open-core` ⚠️) | Choose **OpenLIT** when you want AI-focused instrumentation helpers but still prefer an open standard underneath |
-| **Application and prompt regression testing** | **promptfoo** | `OSI` ✅ (MIT) | promptfoo maintainers | Ragas (`OSI` ✅ Apache-2.0), Langfuse eval workflows (`Open-core` ⚠️) | Choose **promptfoo** when the release question is "did this prompt, workflow or policy still satisfy our assertions?" |
-| **Model benchmark harness** | **lm-eval-harness** | `OSI` ✅ (MIT) | EleutherAI maintainers | promptfoo (`OSI` ✅ MIT), Ragas (`OSI` ✅ Apache-2.0) | Choose **lm-eval-harness** when you need benchmark-style model comparison rather than application-specific workflow grading |
-| **RAG and answer-quality metrics** | **Ragas** | `OSI` ✅ (Apache-2.0) | Ragas maintainers | promptfoo (`OSI` ✅ MIT), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Ragas** when retrieval quality, answer faithfulness and context use are the main questions |
-| **Cost allocation** | **OpenCost** | `OSI` ✅ (Apache-2.0) | OpenCost / CNCF governance **Unverified (not re-checked in this edit)** | Prometheus recording rules, Grafana dashboards, internal chargeback models | Choose **OpenCost** when you want Kubernetes cost allocation joined to model usage and tenant views |
+| **Telemetry standard and SDK shape** | **OpenTelemetry** | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF Graduated | OpenLIT (`OSI` ✅ Apache-2.0), vendor SDKs | Choose **OpenTelemetry** when you want vendor-neutral traces, metrics and logs that survive tool changes |
+| **Time-series metrics store** | **Prometheus** (66.5k★) | `OSI` ✅ (Apache-2.0) | Prometheus / CNCF Graduated | OpenTelemetry Collector export path, managed metrics backends, OpenCost for cost views | Choose **Prometheus** when Kubernetes and service-level metrics are already core platform concerns |
+| **Distributed trace backend** | **Jaeger** (23.3k★) | `OSI` ✅ (Apache-2.0) | Jaeger / CNCF Graduated | Grafana Tempo (**Unverified**: licence and status not checked), Langfuse or Phoenix for LLM-specific views | Choose **Jaeger** when you need a general OTLP trace store for gateway, retrieval and tool spans next to the LLM-specific UI |
+| **Dashboards and exploratory analysis** | **Grafana** (77.2k★) | `OSI` ✅ (AGPL-3.0) | Grafana Labs | Langfuse UI (`Open-core` ⚠️), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Grafana** when you want one shared dashboard surface across AI and non-AI services and you accept AGPL obligations |
+| **LLM trace and prompt analytics** | **Langfuse** (35.6k★) | `Open-core` ⚠️ (MIT outside the `ee/`, `web/src/ee/` and `worker/src/ee/` directories, which carry a separate licence; copyright held by ClickHouse, Inc.) | Langfuse, now part of ClickHouse (search-cited acquisition; copyright line read from `LICENSE`) | OpenLIT (`OSI` ✅ Apache-2.0), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0; 11.8k★), MLflow tracing (`OSI` ✅ Apache-2.0; 28.3k★) | Choose **Langfuse** when you want a purpose-built LLM observability UI with prompt management and the `ee/` boundary is acceptable; confirm which features you need are outside `ee/` |
+| **Open instrumentation starter for LLM apps** | **OpenLLMetry** (7.5k★) | `OSI` ✅ (Apache-2.0) | Traceloop maintainers | OpenLIT (`OSI` ✅ Apache-2.0; 2.8k★), OpenTelemetry GenAI contrib instrumentations | Choose **OpenLLMetry** when you want OTel-based auto-instrumentation of LLM and vector-store SDKs; choose **OpenLIT** when you also want its bundled dashboards and GPU monitoring. Both emit plain OTLP |
+| **Application and prompt regression testing** | **promptfoo** (25.9k★) | `OSI` ✅ (MIT) | promptfoo maintainers | DeepEval (`OSI` ✅ Apache-2.0; 18.7k★, pytest-style), Langfuse eval workflows (`Open-core` ⚠️) | Choose **promptfoo** when the release question is "did this prompt, workflow or policy still satisfy our assertions?"; choose **DeepEval** when your tests already live in pytest |
+| **Model benchmark harness** | **lm-eval-harness** (14.2k★) | `OSI` ✅ (MIT) | EleutherAI maintainers | Inspect AI (`OSI` ✅ MIT; 3.0k★, UK AI Security Institute, agentic and safety evals), promptfoo (`OSI` ✅ MIT) | Choose **lm-eval-harness** when you need benchmark-style model comparison rather than application-specific workflow grading; choose **Inspect** for agent, tool-use and safety evaluations |
+| **RAG and answer-quality metrics** | **Ragas** (16.0k★) | `OSI` ✅ (Apache-2.0) | Ragas maintainers (repository now `vibrantlabsai/ragas`; latest release January 2026, last push February 2026, so activity is slower than peers) | DeepEval (`OSI` ✅ Apache-2.0), promptfoo (`OSI` ✅ MIT), Arize Phoenix evals (`Source-available` ⚠️ Elastic-2.0) | Choose **Ragas** when retrieval quality, answer faithfulness and context use are the main questions; fall back to DeepEval if maintenance stalls |
+| **Cost allocation** | **OpenCost** (6.8k★) | `OSI` ✅ (Apache-2.0) | OpenCost / CNCF Incubating | Prometheus recording rules, Grafana dashboards, internal chargeback models | Choose **OpenCost** when you want Kubernetes cost allocation joined to model usage and tenant views |
+
+Notes:
+
+- Langfuse's open-core boundary and Phoenix's Elastic-2.0 licence (no offering it as a managed service) are the two licence risks in this table; the Apache-2.0 alternatives above cover tracing and evals without them.
+- Instrumentation libraries emit OTLP, so the trace UI can be swapped without re-instrumenting.
 
 Default platform stance:
 
@@ -63,7 +69,7 @@ A practical reference design combines production telemetry and release-time eval
 1. **Instrumentation in the gateway, application, retrieval service, tool runners and model-serving path** emits OTel spans and metrics.
 2. **OpenTelemetry Collector** receives OTLP data, applies redaction or attribute transforms where needed, and fans out to metrics, traces and log backends.
 3. **Prometheus** scrapes service and infrastructure metrics; **Grafana** overlays service SLIs with AI-specific ones such as TTFT, token throughput and cost per request.
-4. **Specialised LLM observability UI** such as Langfuse or OpenLIT can sit beside the shared telemetry plane, not instead of it.
+4. **Specialised LLM observability UI** such as Langfuse or Phoenix, fed by OpenLLMetry or OpenLIT instrumentation, can sit beside the shared telemetry plane, not instead of it.
 5. **Evaluation pipeline** runs from CI or a controlled release workflow against versioned datasets and expected assertions.
 6. **Human review loop** samples high-risk outputs, calibrates judge-model scores and approves threshold changes.
 7. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway.md) and [P03](./03-model-router.md) with infrastructure signals and chargeback tags.
@@ -125,7 +131,7 @@ Standard labels should include:
 - prompt or workflow version
 - retrieval index version, where applicable
 
-Prefer the published OpenTelemetry semantic conventions, including the GenAI attributes where your SDKs support them; the exact attribute set is **Unverified (not re-checked in this edit)** and should be refreshed from [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+Prefer the published OpenTelemetry semantic conventions, including the GenAI attributes where your SDKs support them. The GenAI conventions were still evolving at the snapshot (**Unverified**: not re-checked); pin the semantic-conventions version you emit and refresh it from [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
 Without these labels, cost and regression analysis become anecdotal.
 
@@ -209,10 +215,16 @@ Primary upstreams to re-check:
 - [Langfuse repository](https://github.com/langfuse/langfuse)
 - [Arize Phoenix repository](https://github.com/Arize-ai/phoenix)
 - [OpenLIT repository](https://github.com/openlit/openlit)
+- [OpenLLMetry repository](https://github.com/traceloop/openllmetry)
+- [MLflow repository](https://github.com/mlflow/mlflow)
+- [Jaeger repository](https://github.com/jaegertracing/jaeger)
+- [DeepEval repository](https://github.com/confident-ai/deepeval)
+- [Inspect AI repository](https://github.com/UKGovernmentBEIS/inspect_ai)
+- [Langfuse `LICENSE`](https://github.com/langfuse/langfuse/blob/main/LICENSE) and [Phoenix `LICENSE`](https://github.com/Arize-ai/phoenix/blob/main/LICENSE)
 - [promptfoo repository](https://github.com/promptfoo/promptfoo)
 - [lm-evaluation-harness repository](https://github.com/EleutherAI/lm-evaluation-harness)
-- [Ragas repository](https://github.com/explodinggradients/ragas)
+- [Ragas repository](https://github.com/vibrantlabsai/ragas)
 - [OpenCost repository](https://github.com/opencost/opencost)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
 
-All licence, steward and project-status metadata above is **Unverified (not re-checked in this edit)**; refresh it with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+Licences, stars and CNCF levels were **Opened** on 2026-10-11; the Langfuse acquisition is **Search-cited**. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).

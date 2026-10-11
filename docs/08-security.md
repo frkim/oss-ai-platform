@@ -1,4 +1,4 @@
-# Security
+# P08. Security
 
 > **TL;DR** — Security for an AI platform is not only TLS and CVEs. It is also prompt-injection defence, PII controls, safe tool use, strong identity, short-lived secrets and repeatable red teaming. This pillar owns guardrails and PII; [Hardening](./11-hardening.md) owns image signing, SBOMs, model-artifact safety and tenant isolation.
 
@@ -13,7 +13,7 @@ Classic platform security still applies, but LLM systems add new failure modes:
 - prompts, traces and chat logs can become a new home for secrets and PII;
 - agent loops can amplify a single bad policy decision across many calls.
 
-Use the OWASP LLM Top 10, the OWASP Agentic AI Top 10 and MITRE ATLAS as threat catalogs, not as finished architectures. They help you ask the right questions: who can call which model, with which data, through which tools, and what evidence survives an incident.
+Use the OWASP Top 10 for LLM Applications (2025 edition), the OWASP Top 10 for Agentic Applications (published December 2025; **Unverified** against the official text) and MITRE ATLAS as threat catalogs, not as finished architectures. They help you ask the right questions: who can call which model, with which data, through which tools, and what evidence survives an incident.
 
 This pillar owns:
 
@@ -37,23 +37,27 @@ It does **not** own quotas or rate limits; those belong to [AI gateway](./02-ai-
 | Workload identity | Services get short-lived identities for mTLS and policy decisions | SPIFFE/SPIRE | Service accounts alone are rarely enough across clusters |
 | Fine-grained authorisation | Tool, document and workspace access is relationship based, not only role based | OpenFGA | Coarse RBAC is still fine for simple apps |
 | Secret distribution | Provider keys and tool credentials are centrally stored, rotated and injected just in time | OpenBao + External Secrets Operator | Secret storage belongs here; cluster backup policy belongs to [P12](./12-foundation-infrastructure.md) |
+| Transport certificates | Ingress and internal TLS certificates are issued and renewed automatically | cert-manager | Workload mTLS identity comes from SPIFFE/SPIRE; mesh choice belongs to [P12](./12-foundation-infrastructure.md) |
 | Red teaming | Jailbreak, exfiltration and unsafe-tool tests run before major changes and on a schedule | garak | Keep eval quality work in [P07](./07-observability-evaluation.md) |
 
 ## 3. Tool comparison table
 
 | Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when… |
 |------------|--------------|---------------|---------|------------------|--------------------------|
-| Guardrail orchestration | **NeMo Guardrails** | OSI (`Apache-2.0`) | NVIDIA | LLM Guard (`MIT`), gateway hooks, application middleware | you want explicit safety flows around prompts, retrieved context, tool calls and outputs |
-| Prompt / response classifiers | **LLM Guard** | OSI (`MIT`) | Protect AI maintainers | Llama Guard (`Open weights`), Prompt Guard (`Open weights`), bespoke classifiers | you want lightweight detectors in Python pipelines and can combine them with other controls |
+| Guardrail orchestration | **NeMo Guardrails** | OSI (`Apache-2.0`) | NVIDIA | LLM Guard (`MIT`), Guardrails AI (`Apache-2.0`), gateway hooks, application middleware | you want explicit safety flows around prompts, retrieved context, tool calls and outputs |
+| Prompt / response classifiers | **Llama Guard** | `Open weights` (Llama community licence) | Meta | Prompt Guard (`Open weights`), bespoke classifiers, LLM Guard (`MIT`; repository archived, legacy) | you want lightweight detectors in Python pipelines and can combine them with other controls |
 | PII detection and redaction | **Presidio** | OSI (`MIT`) | Microsoft | LLM Guard PII features, provider-side DLP, custom regex + validation | you need explainable detectors, structured redaction and local execution |
-| Human identity and SSO | **Keycloak** | OSI (`Apache-2.0`) | Keycloak maintainers | existing enterprise IdP (`Not OSS`), application-local auth | you need self-hosted OIDC/SAML, brokering and tenant-aware realms |
-| Fine-grained authorisation | **OpenFGA** | OSI (`Apache-2.0`) | OpenFGA maintainers | coarse Keycloak roles, OPA checks in the app | permissions depend on relations such as user → workspace → document → tool |
-| Workload identity | **SPIFFE/SPIRE** | OSI (`Apache-2.0`) | SPIFFE community | Kubernetes service accounts, mesh-native identity | you want portable workload identities and mTLS across namespaces or clusters |
-| Secrets management | **OpenBao + External Secrets Operator** | OSI (`MPL-2.0`) + OSI (`Apache-2.0`) | OpenBao community + ESO maintainers | HashiCorp Vault (`Source-available`), Kubernetes `Secret` objects managed by hand | you need central rotation and controlled fan-out into workloads |
-| AI red teaming | **garak** | OSI (`Apache-2.0`) | garak maintainers | PyRIT (`MIT`), manual adversarial suites | you want a repeatable regression suite for jailbreak and prompt-based attacks |
+| Human identity and SSO | **Keycloak** | OSI (`Apache-2.0`) | Keycloak maintainers (CNCF incubating) | existing enterprise IdP (`Not OSS`), application-local auth | you need self-hosted OIDC/SAML, brokering and tenant-aware realms |
+| Fine-grained authorisation | **OpenFGA** | OSI (`Apache-2.0`) | OpenFGA maintainers (CNCF incubating) | coarse Keycloak roles, OPA (`Apache-2.0`) or Cedar (`Apache-2.0`) policy checks in the app | permissions depend on relations such as user → workspace → document → tool |
+| Workload identity | **SPIFFE/SPIRE** | OSI (`Apache-2.0`) | SPIFFE community (CNCF graduated) | Kubernetes service accounts, mesh-native identity | you want portable workload identities and mTLS across namespaces or clusters |
+| Secrets management | **OpenBao + External Secrets Operator** | OSI (`MPL-2.0`) + OSI (`Apache-2.0`) | OpenBao community (Linux Foundation; Vault fork) + ESO maintainers | HashiCorp Vault (`Source-available`, BSL 1.1 since 2023), Kubernetes `Secret` objects managed by hand | you need central rotation and controlled fan-out into workloads |
+| Certificate management | **cert-manager** | OSI (`Apache-2.0`) | cert-manager project (CNCF graduated) | mesh-issued certificates, cloud CA services (`Not OSS`) | you need automated X.509 issuance and renewal for ingress and internal TLS |
+| AI red teaming | **garak** | OSI (`Apache-2.0`) | garak maintainers (NVIDIA) | PyRIT (`MIT`), promptfoo (`MIT`), manual adversarial suites | you want a repeatable regression suite for jailbreak and prompt-based attacks |
 
 Notes:
 
+- PyRIT suits multi-turn, scripted attack orchestration; promptfoo suits CI-friendly red-team and eval configs. garak is the default for broad probe coverage out of the box.
+- Licences and stewards for Guardrails AI, promptfoo, Cedar and cert-manager were not re-opened in this edit; treat as **Unverified** until checked per [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 - Llama Guard and Prompt Guard are useful open-weight safety models, but *open weights are not open source* under the licence legend in [Methodology](./00-methodology.md#32-licence-policy-and-legend).
 - Any licence, owner or project-status claim that matters to a procurement or risk decision should be re-checked with the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
@@ -87,7 +91,7 @@ request -> identity -> PII scan -> prompt-risk checks -> authz(tool/resource) ->
 A minimal External Secrets Operator pattern for model credentials is:
 
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: provider-key
@@ -170,10 +174,10 @@ Security review should be part of change management:
 These are the main texts and upstream projects to re-open when adopting this pillar:
 
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-- [OWASP Agentic AI Security Initiative](https://owasp.org/www-project-agentic-ai-security-initiative/)
+- [OWASP Agentic AI Security Initiative](https://genai.owasp.org/initiatives/agentic-security-initiative/)
 - [MITRE ATLAS](https://atlas.mitre.org/)
 - [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails)
-- [LLM Guard](https://github.com/protectai/llm-guard)
+- [LLM Guard](https://github.com/protectai/llm-guard) (archived)
 - [Presidio](https://github.com/microsoft/presidio)
 - [Keycloak](https://www.keycloak.org/)
 - [OpenFGA](https://github.com/openfga/openfga)
@@ -182,4 +186,7 @@ These are the main texts and upstream projects to re-open when adopting this pil
 - [External Secrets Operator](https://external-secrets.io/)
 - [garak](https://github.com/NVIDIA/garak)
 - [PyRIT](https://github.com/Azure/PyRIT)
+- [promptfoo](https://github.com/promptfoo/promptfoo)
+- [Guardrails AI](https://github.com/guardrails-ai/guardrails)
+- [cert-manager](https://cert-manager.io/)
 - [Methodology](./00-methodology.md) for the licence legend, evidence grades and re-verification commands

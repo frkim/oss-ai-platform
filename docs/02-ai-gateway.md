@@ -1,4 +1,4 @@
-# AI gateway
+# P02. AI gateway
 
 > **TL;DR** — Put one governed, OpenAI-compatible front door in front of every model call. The gateway is where teams authenticate, receive virtual keys, hit quotas and budgets, and emit consistent usage records. It is not the deep home for routing policies, caching or guardrails; those belong in sibling pillars.
 
@@ -39,16 +39,23 @@ A useful litmus test: if the question is "who is allowed to spend how much, usin
 
 ## 3. Tool comparison
 
-Licence labels, steward names and rename notes below are snapshot facts and therefore **Unverified (not re-checked in this edit; re-verify with the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**.
+Licence labels, stars (rounded) and repository status were read from GitHub on 2026-10-11 (**Opened**: repository metadata and `LICENSE` files). Rename and "choose when" notes are editorial. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before adoption.
 
 | Tool | Licence label | Steward | Default pick? | Alternatives | Choose X when… |
 |------|---------------|---------|---------------|--------------|----------------|
-| **LiteLLM** | Open-core | BerriAI | **Default** | Agent Router; Kong Gateway core | Choose LiteLLM when the gateway itself must own virtual keys, per-tenant quotas, model aliases and cost attribution across many upstream APIs or self-hosted endpoints. Keep routing policy simple here and push richer traffic policy into [P03](./03-model-router.md). |
-| **Agent Router** | OSI ✅ Apache-2.0 | Agent Router project | Alternative | LiteLLM; Kong Gateway core | Choose Agent Router when you want a Kubernetes- and Gateway API-centric front door, especially if routing policy will become a first-class concern. The project was previously called Envoy AI Gateway — **Unverified (not re-checked in this edit; re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**. |
-| **Kong Gateway core** | OSI ✅ Apache-2.0 | Kong Inc. | Alternative | LiteLLM; Agent Router | Choose Kong when your platform already standardises on Kong for north-south traffic and you only need OSS-core gateway functions plus straightforward path, header or weighted routing. Treat AI-specific extras as a separate product decision. |
+| **LiteLLM** (~60.9k★) | Open-core ⚠️ (MIT outside `enterprise/`; `enterprise/` needs a commercial subscription) | BerriAI | **Default** | Agent Router; Portkey Gateway; Kong Gateway core | Choose LiteLLM when the gateway itself must own virtual keys, per-tenant quotas, model aliases and cost attribution across many upstream APIs or self-hosted endpoints. Keep routing policy simple here and push richer traffic policy into [P03](./03-model-router.md). Check that the gated `enterprise/` features (for example SSO and some audit and team-budget controls — **Unverified**, confirm in the enterprise `LICENSE.md`) are not on your must-have list. |
+| **Agent Router** (formerly Envoy AI Gateway; ~2.2k★) | OSI ✅ Apache-2.0 | Agent Router project (`theagentrouter`; `envoyproxy/ai-gateway` redirects) | Alternative | LiteLLM; kgateway; Kong Gateway core | Choose Agent Router when you want a Kubernetes- and Gateway API-centric front door built on Envoy, especially if routing policy will become a first-class concern. The rename is **Opened** ([Methodology §4.3](./00-methodology.md#43-why-live-verification-matters-two-examples)). |
+| **kgateway** (~5.7k★) | OSI ✅ Apache-2.0 | kgateway project (formerly Gloo) | Alternative | Agent Router; agentgateway | Choose kgateway when you want a Gateway API implementation on Envoy with AI-gateway extensions (prompt guards, provider routing) and may later add the Gateway API Inference Extension. Its CNCF level is sandbox (landscape file, 2026-10-11). |
+| **agentgateway** (~5.3k★) | OSI ✅ Apache-2.0 | agentgateway project | Alternative | kgateway; Agent Router | Choose agentgateway when MCP and agent-to-agent (A2A) traffic must be governed alongside LLM calls; it is a Rust data plane that also serves LLM traffic. |
+| **Kong Gateway core** (~44.3k★) | OSI ✅ Apache-2.0 | Kong Inc. | Alternative | LiteLLM; Agent Router; Apache APISIX | Choose Kong when your platform already standardises on Kong for north-south traffic and you only need OSS-core gateway functions plus straightforward path, header or weighted routing. Treat AI-specific extras as a separate product decision. Kong's upstream OSS binary and image publishing policy has changed — **Unverified**; confirm what you can actually deploy without a licence. |
+| **Apache APISIX** (~17.2k★) | OSI ✅ Apache-2.0 | Apache Software Foundation | Alternative | Kong Gateway core; Higress | Choose APISIX when you want an ASF-governed, plugin-rich gateway with AI proxy and rate-limit plugins and no vendor-gated tier. |
+| **Higress** (~9.5k★) | OSI ✅ Apache-2.0 | Alibaba / Higress community | Alternative | APISIX; Agent Router | Choose Higress when you are Istio/Envoy-based and want an AI-native gateway with a strong China-region provider catalogue; documentation is mainly Chinese-first — **Unverified**. |
+| **Portkey Gateway** (~13.2k★) | OSI ✅ MIT | Portkey AI | Alternative | LiteLLM | Choose Portkey's open gateway for a lightweight, fast routing and guardrail proxy. Last push was 2026-05-25, so check maintenance; its fuller governance features are in the commercial platform — **Unverified**. |
 | **Build your own thin proxy** | OSI ✅ (your code) | Your team | Last resort | LiteLLM; Agent Router | Choose a custom proxy only when your requirements are genuinely narrow: one provider, one auth method, no delegated budgets, and a strong desire to minimise moving parts. Most teams regret this by the second tenant. |
 
-Why LiteLLM is the default here: this pillar is more about control-plane convenience than about sophisticated traffic engineering. An open-source AI platform usually needs virtual keys, spend attribution and request normalisation earlier than it needs advanced routing semantics.
+Why LiteLLM is the default here: this pillar is more about control-plane convenience than about sophisticated traffic engineering. An open-source AI platform usually needs virtual keys, spend attribution and request normalisation earlier than it needs advanced routing semantics. It is the most widely adopted candidate above and has the most direct virtual-key and budget model (editorial judgement), but it is `Open-core`, which the methodology tolerates only where the open part covers the use case. If a strict OSI-only policy applies, pick Agent Router or APISIX and accept thinner budget tooling.
+
+Signals: **licence** and **adoption** are in the table; **maintenance** is healthy for every row except Portkey (pushed within a week of the snapshot for the rest); **interoperability** means an OpenAI-compatible API and/or Gateway API; **security posture** and **operability** (Helm chart, HA) were not compared per tool — **Unverified**, assess in your own evaluation.
 
 ## 4. Reference design
 
@@ -205,5 +212,10 @@ Opened earlier in this repository's research process; re-check before adoption:
 - [LiteLLM enterprise licence note](https://github.com/BerriAI/litellm/blob/main/enterprise/LICENSE.md)
 - [Agent Router repository](https://github.com/theagentrouter/agent-router)
 - [Kong Gateway repository](https://github.com/Kong/kong)
+- [kgateway repository](https://github.com/kgateway-dev/kgateway)
+- [agentgateway repository](https://github.com/agentgateway/agentgateway)
+- [Apache APISIX repository](https://github.com/apache/apisix)
+- [Higress repository](https://github.com/higress-group/higress)
+- [Portkey Gateway repository](https://github.com/Portkey-AI/gateway)
 - [Methodology](./00-methodology.md)
 - [Glossary](./15-glossary.md)

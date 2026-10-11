@@ -1,6 +1,6 @@
 # Open-source AI platform blueprint
 
-A documentation repository on how to design and build a complete, vendor-neutral, **open-source AI platform**: AI gateway, model router, model serving, retrieval, agents, observability, security, governance, reliability and performance, and hardening.
+A documentation repository on how to design and build a complete, vendor-neutral, **open-source AI platform**: AI gateway, model router, model serving, retrieval, agents, observability and evaluation, security, governance, reliability and performance, hardening, and the foundation and delivery layer.
 
 *Snapshot: 2026-10-11. Tool facts (licences, stars, releases, project status) were verified on that date and decay quickly; see the [methodology](./docs/00-methodology.md) for how, and how to refresh them.*
 
@@ -24,6 +24,8 @@ The research first defined the pillars (from the CNCF Cloud Native AI whitepaper
 | P11 | [Hardening](./docs/11-hardening.md) | Cluster and node baselines, supply chain, model-artifact safety, isolation |
 | P12 | [Foundation and delivery](./docs/12-foundation-infrastructure.md) | Kubernetes, networking, storage, GitOps, infrastructure as code, licence watch-list |
 
+Topics deliberately left out or split across pillars (fine-tuning, prompt management, multi-tenancy, FinOps, developer portals, edge, multimodal) are listed in [methodology 2.4](./docs/00-methodology.md#24-deliberate-non-pillars).
+
 Supporting documents:
 
 - [Methodology](./docs/00-methodology.md): how the pillars and tools were chosen, the evidence grades, and the limits of the research.
@@ -43,7 +45,7 @@ Supporting documents:
 
 - **Open source first.** Recommended platform components are open source. The platform may still call commercial model APIs through the gateway. Licence labels are `OSI`, `Open-core`, `Source-available`, `Open weights` and `Not OSS`.
 - **Dated facts.** Time-sensitive claims are as of the snapshot date and graded by how they were verified.
-- **Unverified pillar facts.** The pillar documents (P02–P12), the tool landscape and the references were drafted without live access to GitHub. They carry no star counts or release versions, and time-sensitive claims are marked *Unverified* until re-checked with the commands in the [methodology](./docs/00-methodology.md#5-snapshot-and-refresh).
+- **Unverified pillar facts.** The pillar documents (P02–P12), the tool landscape and the references were drafted without live access to GitHub. They carry no star counts or release versions, and time-sensitive claims are marked *Unverified* until re-checked with the commands in the [methodology](./docs/00-methodology.md#5-snapshot-and-refresh). A later spot-check found archived or moved projects (for example LLM Guard, MinIO, TGI); see the [tool landscape findings](./docs/14-tool-landscape.md#spot-check-findings-2026-10-11).
 - **Not audited or legal advice.** This repository was drafted with AI assistance and then reviewed and fact-checked in separate passes. Verify before you adopt a tool, and check official texts before any compliance decision. Issues and corrections are welcome.
 
 ## Licence

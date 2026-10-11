@@ -1,4 +1,4 @@
-# Model router
+# P03. Model router
 
 > **TL;DR** — The model router decides which backend should serve each request and what to do when the first choice is not the best choice. This is the home for routing policies, canaries, retries and fallbacks, whether traffic goes to provider APIs or to self-hosted engines.
 
@@ -40,16 +40,21 @@ A simple rule helps prevent design drift: P02 answers "may this caller spend on 
 
 ## 3. Tool comparison
 
-Licence labels, steward names and rename notes below are snapshot facts and therefore **Unverified (not re-checked in this edit; re-verify with the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**.
+Licence labels, stars (rounded) and repository status were read from GitHub on 2026-10-11 (**Opened**). Maturity and "choose when" notes are editorial. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before adoption.
 
 | Tool | Licence label | Steward | Default pick? | Alternatives | Choose X when… |
 |------|---------------|---------|---------------|--------------|----------------|
-| **Agent Router** | OSI ✅ Apache-2.0 | Agent Router project | **Default** | Gateway API Inference Extension; LiteLLM router; Kong Gateway core | Choose Agent Router when routing policy is a first-class platform concern and you want Kubernetes- and Gateway API-shaped control. It fits well when the gateway and the serving estate are separate layers. The project was previously called Envoy AI Gateway — **Unverified (not re-checked in this edit; re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**. |
-| **Gateway API Inference Extension** | OSI ✅ Apache-2.0 | kubernetes-sigs | Alternative | Agent Router; llm-d; LiteLLM router | Choose the Gateway API Inference Extension when you specifically need inference-aware endpoint selection inside the cluster, driven by signals such as queue depth or cache locality exposed by the serving layer. |
-| **LiteLLM router** | Open-core | BerriAI | Alternative | Agent Router; Gateway API Inference Extension | Choose LiteLLM routing when a single component can reasonably own both the gateway and the router, usually in smaller or provider-heavy estates. Be strict about separating budget controls in [P02](./02-ai-gateway.md) from routing policy here. |
-| **Kong Gateway core** | OSI ✅ Apache-2.0 | Kong Inc. | Alternative | Agent Router; LiteLLM router | Choose Kong when you already run Kong broadly and your routing needs are mostly classic API-gateway patterns: path, header, weighted split and failure handling. |
+| **Agent Router** (formerly Envoy AI Gateway; ~2.2k★) | OSI ✅ Apache-2.0 | Agent Router project | **Default** | Gateway API Inference Extension; kgateway; LiteLLM router | Choose Agent Router when routing policy is a first-class platform concern and you want Kubernetes- and Gateway API-shaped control. It fits well when the gateway and the serving estate are separate layers. The rename is **Opened** ([Methodology §4.3](./00-methodology.md#43-why-live-verification-matters-two-examples)). |
+| **Gateway API Inference Extension** (~0.8k★) | OSI ✅ Apache-2.0 | kubernetes-sigs | Alternative (complement) | Agent Router; llm-d; kgateway | Choose the Gateway API Inference Extension when you specifically need inference-aware endpoint selection inside the cluster, driven by signals such as queue depth or cache locality exposed by the serving layer. It is an endpoint-picker extension rather than a standalone router, so it pairs with a Gateway API implementation (Agent Router, kgateway and others support it — **Unverified**, check your implementation's conformance). |
+| **llm-d** (~4.8k★) | OSI ✅ Apache-2.0 | llm-d community | Alternative (complement) | Gateway API Inference Extension; KServe | Choose llm-d when you want a prebuilt, vLLM-based inference-aware routing and disaggregated-serving stack; it builds on the Inference Extension. Serving details are in [P04](./04-model-serving.md). |
+| **vLLM Semantic Router** (~6.1k★) | OSI ✅ Apache-2.0 | vLLM project | Alternative | LiteLLM router; Agent Router | Choose it when the route should depend on request content (intent, complexity, safety class) rather than headers, for example to send simple prompts to a small model. Treat classifier quality as something to evaluate with [P07](./07-observability-evaluation.md). |
+| **kgateway** (~5.7k★) | OSI ✅ Apache-2.0 | kgateway project (formerly Gloo) | Alternative | Agent Router; Kong Gateway core | Choose kgateway when you want Envoy-based Gateway API traffic management with AI extensions and Inference Extension support (**Unverified**). |
+| **LiteLLM router** (~60.9k★) | Open-core ⚠️ (MIT outside `enterprise/`) | BerriAI | Alternative | Agent Router; Gateway API Inference Extension | Choose LiteLLM routing when a single component can reasonably own both the gateway and the router, usually in smaller or provider-heavy estates. Be strict about separating budget controls in [P02](./02-ai-gateway.md) from routing policy here. |
+| **Kong Gateway core** (~44.3k★) | OSI ✅ Apache-2.0 | Kong Inc. | Alternative | Agent Router; LiteLLM router | Choose Kong when you already run Kong broadly and your routing needs are mostly classic API-gateway patterns: path, header, weighted split and failure handling. |
 
-Why Agent Router is the default here: it is closer to the shape of the problem. This pillar is about declarative traffic policy, not only about translating SDK calls.
+Why Agent Router is the default here: it is closer to the shape of the problem. This pillar is about declarative traffic policy, not only about translating SDK calls. Note the deliberate asymmetry with [P02](./02-ai-gateway.md): LiteLLM is the default there because virtual keys and budgets dominate, while declarative traffic policy dominates here. Both are fine in one stack, with the boundary kept explicit.
+
+Signals: licence and adoption are in the table; all rows were pushed within about a week of the snapshot (maintenance); interoperability is mainly Gateway API and OpenAI-compatible APIs. Security posture and operability were not compared per tool — **Unverified**.
 
 ## 4. Reference design
 
@@ -219,6 +224,9 @@ Opened earlier in this repository's research process; re-check before adoption:
 
 - [Agent Router repository](https://github.com/theagentrouter/agent-router)
 - [Gateway API Inference Extension repository](https://github.com/kubernetes-sigs/gateway-api-inference-extension)
+- [llm-d repository](https://github.com/llm-d/llm-d)
+- [vLLM Semantic Router repository](https://github.com/vllm-project/semantic-router)
+- [kgateway repository](https://github.com/kgateway-dev/kgateway)
 - [LiteLLM repository](https://github.com/BerriAI/litellm)
 - [Kong Gateway repository](https://github.com/Kong/kong)
 - [Methodology](./00-methodology.md)

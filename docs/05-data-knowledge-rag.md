@@ -35,16 +35,24 @@ Ownership boundaries matter here:
 
 ## 3. Tool comparison
 
-Tool metadata in this section — licences, stewards and project or foundation status — is **Unverified (not re-checked in this edit)**. Refresh it with the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh), then open the upstream `LICENSE` file before adoption.
+Licences were read from each upstream `LICENSE` file, and stars, push dates and archived flags from the GitHub API, on 2026-10-11 (**Opened**; stars rounded to 0.1k). Foundation statuses are **Search-cited** unless stated. Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before adoption. The six signals ([Methodology §3.1](./00-methodology.md#31-six-signals)) that drove the picks are licence, operability (one system fewer to run) and interoperability (SQL, filters, hybrid search); all listed projects were pushed within the last month and none is archived.
 
 | Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
 |------------|--------------|---------------|---------|--------------|----------------|
-| **Vector search inside the main relational store** | **pgvector** | `OSI` ✅ (PostgreSQL licence) | PostgreSQL ecosystem / pgvector maintainers | Qdrant (`OSI` ✅ Apache-2.0), Weaviate (`OSI` ✅ BSD-3-Clause) | Choose **pgvector** when you already run PostgreSQL, need SQL joins and filters, and want the smallest operational surface for the first production release |
-| **Dedicated vector database** | **Qdrant** | `OSI` ✅ (Apache-2.0) | Qdrant | Milvus (`OSI` ✅ Apache-2.0; LF AI & Data status **Unverified (not re-checked in this edit)**), Weaviate (`OSI` ✅ BSD-3-Clause) | Choose **Qdrant** when you want a purpose-built vector service with filtering, snapshots and operational separation from the transactional database |
-| **Large-scale or heavily specialised vector platform** | **Milvus** | `OSI` ✅ (Apache-2.0) | Milvus community; LF AI & Data affiliation **Unverified (not re-checked in this edit)** | Qdrant (`OSI` ✅ Apache-2.0), Weaviate (`OSI` ✅ BSD-3-Clause) | Choose **Milvus** when the retrieval tier is large enough to justify a dedicated distributed system and the team can absorb the extra operational complexity |
-| **Schema-rich vector search with built-in object model** | **Weaviate** | `OSI` ✅ (BSD-3-Clause) | Weaviate | Qdrant (`OSI` ✅ Apache-2.0), pgvector (`OSI` ✅ PostgreSQL licence) | Choose **Weaviate** when you want vector retrieval plus an opinionated object model and are comfortable aligning application schemas to that model |
-| **Document parsing and enrichment** | **Docling** | `OSI` ✅ (MIT) | Docling maintainers | Unstructured (`verify the LICENSE file`; project metadata **Unverified (not re-checked in this edit)**) | Choose **Docling** when document fidelity, table extraction and a local-first parsing path matter more than a broad connector marketplace |
-| **Broad file-type and ETL convenience** | **Unstructured** | `verify the LICENSE file` | Unstructured maintainers | Docling (`OSI` ✅ MIT) | Choose **Unstructured** when its connectors or partitioning pipeline fit your estate, but verify licence boundaries and packaging before standardising |
+| **Vector search inside the main relational store** | **pgvector** (23.3k★) | `OSI` ✅ (PostgreSQL licence) | PostgreSQL ecosystem / pgvector maintainers | Qdrant (`OSI` ✅ Apache-2.0), LanceDB (`OSI` ✅ Apache-2.0, embedded) | Choose **pgvector** when you already run PostgreSQL, need SQL joins and filters, and want the smallest operational surface for the first production release |
+| **Dedicated vector database** | **Qdrant** (35.0k★) | `OSI` ✅ (Apache-2.0) | Qdrant (company-led) | Milvus (`OSI` ✅ Apache-2.0), Chroma (`OSI` ✅ Apache-2.0; 29.5k★, simple developer-first store), Weaviate (`Open-core` ⚠️) | Choose **Qdrant** when you want a purpose-built vector service with filtering, snapshots and operational separation from the transactional database |
+| **Large-scale or heavily specialised vector platform** | **Milvus** (46.3k★) | `OSI` ✅ (Apache-2.0) | Milvus community (Zilliz-led); LF AI & Data graduated project (search-cited) | Qdrant (`OSI` ✅ Apache-2.0), Vespa (`OSI` ✅ Apache-2.0; 7.1k★, ranking and tensor workloads) | Choose **Milvus** when the retrieval tier is large enough to justify a dedicated distributed system and the team can absorb the extra operational complexity |
+| **Schema-rich vector search with built-in object model** | **Weaviate** (16.9k★) | `Open-core` ⚠️ (BSD-3-Clause outside the `wl/` directory; `wl/` is under a separate Weaviate enterprise licence) | Weaviate BV | Qdrant (`OSI` ✅ Apache-2.0), pgvector (`OSI` ✅ PostgreSQL licence) | Choose **Weaviate** when you want vector retrieval plus an opinionated object model and are comfortable aligning application schemas to that model; confirm you do not need anything under `wl/` |
+| **Lexical and hybrid (BM25 + vector) search** | **OpenSearch** (13.8k★) | `OSI` ✅ (Apache-2.0) | OpenSearch Software Foundation (Linux Foundation; **Unverified**) | Elasticsearch (`Source-available` ⚠️: AGPL-3.0, SSPL or Elastic-2.0 at your choice for the default code; AGPL option added in 2024; read from `LICENSE.txt`), Vespa (`OSI` ✅ Apache-2.0), pgvector plus PostgreSQL full-text search | Choose **OpenSearch** when keyword, code and ID matching matter as much as semantic similarity and you want an Apache-2.0 search engine; choose **Elasticsearch** only after legal review of its licence options |
+| **Document parsing and enrichment** | **Docling** (68.7k★) | `OSI` ✅ (MIT) | Docling maintainers (open-source project originated at IBM Research; Linux Foundation hosting is **Unverified**) | Unstructured (`OSI` ✅ Apache-2.0 for the open-source library) | Choose **Docling** when document fidelity, table extraction and a local-first parsing path matter more than a broad connector marketplace |
+| **Broad file-type and ETL convenience** | **Unstructured** (15.6k★) | `OSI` ✅ (Apache-2.0) for the open-source library; the commercial hosted platform is `Not OSS` | Unstructured (company) | Docling (`OSI` ✅ MIT) | Choose **Unstructured** when its connectors or partitioning pipeline fit your estate; keep to the open library, as hosted and enterprise features are separate products |
+| **RAG orchestration framework (optional)** | **LlamaIndex** (52.5k★) | `OSI` ✅ (MIT) | LlamaIndex (company) | Haystack (`OSI` ✅ Apache-2.0; 26.7k★, deepset), hand-written retrieval service | Choose **LlamaIndex** or **Haystack** when you want ready-made loaders, chunkers and retrievers; skip both if the retrieval service from section 4 already fits, since they add a dependency that moves quickly |
+
+Notes:
+
+- **Redis and Elasticsearch relicensing.** Redis 8 is tri-licensed (RSALv2, SSPLv1 or AGPL-3.0; 7.2 and earlier are BSD-3-Clause); Valkey (BSD-3-Clause, Linux Foundation) is the permissive fork. Neither is a recommended vector store here. If a cache or key-value store is needed alongside RAG, prefer Valkey and see [P10](./10-reliability-performance.md).
+- Default picks are justified by the signals above: pgvector minimises systems to run; Qdrant has the strongest Apache-2.0 filtering story at moderate scale; Milvus is the choice when scale justifies a distributed system. Weaviate is not a default because of its open-core boundary.
+- Vector-store benchmark claims are not reproduced here; measure with your own corpus and filters.
 
 Default platform stance:
 
@@ -204,12 +212,20 @@ Common failures are architectural, not mathematical:
 
 ## 9. Sources
 
-The links below are the primary upstreams to re-check. Metadata claims in this document are **Unverified (not re-checked in this edit)**; use the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before relying on licences, stewards or project status.
+The links below are the primary upstreams. Licences and stars were read from the repositories on 2026-10-11 (**Opened**); foundation and acquisition claims are **Search-cited**. Use the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) to refresh them.
 
 - [pgvector repository](https://github.com/pgvector/pgvector)
 - [Qdrant repository](https://github.com/qdrant/qdrant)
 - [Milvus repository](https://github.com/milvus-io/milvus)
 - [Weaviate repository](https://github.com/weaviate/weaviate)
+- [Chroma repository](https://github.com/chroma-core/chroma)
+- [LanceDB repository](https://github.com/lancedb/lancedb)
+- [Vespa repository](https://github.com/vespa-engine/vespa)
+- [OpenSearch repository](https://github.com/opensearch-project/OpenSearch)
+- [Elasticsearch `LICENSE.txt`](https://github.com/elastic/elasticsearch/blob/main/LICENSE.txt)
+- [Redis `LICENSE.txt`](https://github.com/redis/redis/blob/unstable/LICENSE.txt) and [Valkey repository](https://github.com/valkey-io/valkey)
+- [LlamaIndex repository](https://github.com/run-llama/llama_index)
+- [Haystack repository](https://github.com/deepset-ai/haystack)
 - [Docling repository](https://github.com/docling-project/docling)
 - [Unstructured repository](https://github.com/Unstructured-IO/unstructured)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
