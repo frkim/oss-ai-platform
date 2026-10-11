@@ -2,7 +2,7 @@
 
 > **TL;DR** — Foundation and delivery is the substrate the rest of the platform stands on: Kubernetes, networking, storage, GitOps, certificates, packaging and infrastructure as code. Good choices here make every other pillar easier to operate and easier to replace.
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Reference architecture](./01-reference-architecture.md) · [Model serving](./04-model-serving.md) · [Reliability and performance](./10-reliability-performance.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Reference architecture](./01-reference-architecture.md) · [Model serving](./03-model-serving.md) · [Reliability, performance and capacity](./11-reliability-capacity.md) · [Platform experience and tenancy](./13-platform-experience.md)*
 
 ## 1. Why it matters
 
@@ -18,22 +18,22 @@ This pillar owns:
 - certificate management and batch-queue primitives;
 - the infrastructure licence watch-list.
 
-It does **not** own guardrails or PII policy; those belong to [Security](./08-security.md). It also does not own caching policy; that belongs to [Reliability and performance](./10-reliability-performance.md). Secret *plumbing* appears here as infrastructure, but secret *policy* belongs to [Security](./08-security.md).
+It does **not** own tenancy design (namespace, vcluster and hierarchical models), which belongs to [P13](./13-platform-experience.md), though the cluster substrate here must support it. It also does not own guardrails, PII policy or workload and node hardening; those belong to [Security and safety](./09-security-safety.md). It also does not own caching policy; that belongs to [Reliability, performance and capacity](./11-reliability-capacity.md). Secret *plumbing* appears here as infrastructure, but secret *policy* belongs to [Security and safety](./09-security-safety.md).
 
 ## 2. Capability map
 
 | Capability | What good looks like | Default building block | Boundary |
 |------------|----------------------|------------------------|----------|
-| Cluster substrate | Every environment is reproducible and declarative | Kubernetes | AI-specific runtime choices still belong to [P04](./04-model-serving.md) |
-| Traffic contract | Gateways and routes use standard Kubernetes APIs where possible | Gateway API | Product routing policy belongs to [P02](./02-ai-gateway.md) and [P03](./03-model-router.md) |
-| Cluster networking | One network layer handles policy, service reachability and observability cleanly | Cilium | Hardening policy details belong to [P11](./11-hardening.md) |
+| Cluster substrate | Every environment is reproducible and declarative | Kubernetes | AI-specific runtime choices still belong to [P03](./03-model-serving.md) |
+| Traffic contract | Gateways and routes use standard Kubernetes APIs where possible | Gateway API | Product routing policy belongs to [P02](./02-ai-gateway-routing.md) |
+| Cluster networking | One network layer handles policy, service reachability and observability cleanly | Cilium | Network hardening policy belongs to [P09](./09-security-safety.md) |
 | Persistent storage | Stateful platform services have a clear object, block and backup story | Rook/Ceph by default | MinIO's community repository is archived and no longer maintained (verified 2026-10-11), so do not choose it for new designs |
-| GitOps delivery | Desired state is promoted through Git and continuously reconciled | Argo CD or Flux | Release approval process belongs to [P09](./09-governance-risk-compliance.md) |
-| Infrastructure as code | Shared environments are created from reviewable, reusable definitions | OpenTofu | Governance of exceptions still belongs to [P09](./09-governance-risk-compliance.md) |
+| GitOps delivery | Desired state is promoted through Git and continuously reconciled | Argo CD or Flux | Release approval process belongs to [P10](./10-governance-finops.md) |
+| Infrastructure as code | Shared environments are created from reviewable, reusable definitions | OpenTofu | Governance of exceptions still belongs to [P10](./10-governance-finops.md) |
 | Control-plane composition | Product teams request higher-level platform resources instead of raw cloud APIs | Crossplane | Keep ownership boundaries clear to avoid shadow platform teams |
 | Packaging | Upstream projects install in a repeatable way | Helm | Kustomize overlays are still useful around Helm |
-| Certificates | Internal and edge-facing certificates are automated | cert-manager | Identity policy still belongs to [P08](./08-security.md) |
-| Batch and queueing | Offline eval, ETL and GPU-heavy jobs do not starve online services | Kueue | Online serving autoscaling still belongs to [P10](./10-reliability-performance.md) |
+| Certificates | Internal and edge-facing certificates are automated | cert-manager | Identity policy still belongs to [P09](./09-security-safety.md) |
+| Batch and queueing | Offline eval, ETL and GPU-heavy jobs do not starve online services | Kueue | Online serving autoscaling and GPU quota and capacity planning belong to [P11](./11-reliability-capacity.md) |
 
 ## 3. Tool comparison table
 
@@ -50,7 +50,7 @@ It does **not** own guardrails or PII policy; those belong to [Security](./08-se
 | Batch queueing | **Kueue** | OSI (`Apache-2.0`) | Kubernetes SIG Scheduling | Volcano (`Apache-2.0`, CNCF incubating), NVIDIA KAI Scheduler (`Apache-2.0`), native Job priority | GPU-heavy batch or evaluation jobs compete with online inference and need explicit admission control; choose Volcano or KAI when you need gang scheduling or GPU sharing beyond Kueue's quota model |
 | Node autoscaling | **Karpenter** | OSI (`Apache-2.0`) | Kubernetes SIG Autoscaling | Cluster Autoscaler | you need fast, GPU-aware node provisioning on a supported cloud provider; on bare metal use Cluster Autoscaler or fixed pools |
 | GPU enablement | **NVIDIA GPU Operator** | OSI (`Apache-2.0`) | NVIDIA | vendor device plugins for other accelerators | NVIDIA GPUs need drivers, device plugin and monitoring managed declaratively |
-| Secrets and policy plumbing | **External Secrets Operator** and **Kyverno** | OSI (`Apache-2.0`) | CNCF projects | OpenBao (`MPL-2.0`) as a Vault-compatible store; OPA Gatekeeper (`Apache-2.0`) | provider keys and certificates must be synced from a secret manager and cluster policy enforced as code (policy design stays in [P08](./08-security.md)) |
+| Secrets and policy plumbing | **External Secrets Operator** and **Kyverno** | OSI (`Apache-2.0`) | CNCF projects | OpenBao (`MPL-2.0`) as a Vault-compatible store; OPA Gatekeeper (`Apache-2.0`) | provider keys and certificates must be synced from a secret manager and cluster policy enforced as code (policy design stays in [P09](./09-security-safety.md)) |
 
 Notes:
 
@@ -135,7 +135,7 @@ These items are worth re-checking before a long-term foundation decision:
 - **Redis** — Redis moved from BSD to RSALv2/SSPL (7.4) and later added AGPL-3.0 as an option (8.0) — **Unverified**, search-cited; confirm exactly which edition and terms you mean, and consider Valkey (BSD-3-Clause, Linux Foundation) as an OSI alternative.
 - **Elasticsearch** — moved to SSPL/Elastic-2.0 in 2021 and added AGPL-3.0 as an option in 2024 — **Unverified**, search-cited; confirm whether the chosen distribution matches your policy, and consider OpenSearch (`Apache-2.0`).
 - **MinIO** — `AGPL-3.0`, but the community repository is archived with a README notice that it is no longer maintained and that the AIStor editions are the successors (**Opened**). Plan a migration path.
-- **Ray, Kong, LiteLLM** — see [P04](./04-model-serving.md) and [P02](./02-ai-gateway.md): Ray is `Apache-2.0`; Kong Gateway core is `Apache-2.0` with upstream OSS-binary policy **Unverified**; LiteLLM is `Open-core`.
+- **Ray, Kong, LiteLLM** — see [P03](./03-model-serving.md) and [P02](./02-ai-gateway-routing.md): Ray is `Apache-2.0`; Kong Gateway core is `Apache-2.0` with upstream OSS-binary policy **Unverified**; LiteLLM is `Open-core`.
 
 For any of the above, re-read the current `LICENSE` file and upstream announcements using the refresh process in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 

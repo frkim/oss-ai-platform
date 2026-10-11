@@ -1,8 +1,8 @@
-# P05. Data and knowledge (RAG)
+# P05. Knowledge and context
 
-> **TL;DR** — Start RAG with disciplined ingestion, stable metadata and access control, not with a large vector stack. For most teams the first safe default is PostgreSQL plus `pgvector`; move to a dedicated vector database only when scale, isolation or retrieval features justify the extra system.
+> **TL;DR** — Knowledge and context is everything the model sees besides the user's question: retrieved documents, agent memory, and versioned prompt and context assets. Start with disciplined ingestion, stable metadata and access control, not a large vector stack. The first safe default is PostgreSQL plus `pgvector`; add a dedicated vector database, a memory store or graph retrieval only when a measured need justifies the extra system.
 
-*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model serving](./04-model-serving.md) · [Reliability and performance](./10-reliability-performance.md)*
+*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model serving](./03-model-serving.md) · [Reliability, performance and capacity](./11-reliability-capacity.md) · [Agents](./06-agents-mcp.md) · [Evaluation](./08-evaluation-quality.md)*
 
 ## 1. Why it matters
 
@@ -16,9 +16,9 @@ A weak retrieval layer creates confident but unsupported answers, stale citation
 
 Ownership boundaries matter here:
 
-- **Caching** belongs to [P10](./10-reliability-performance.md).
-- **Guardrails, prompt-injection defence and PII handling** belong to [P08](./08-security.md).
-- **Fallbacks across embedding models or search backends** belong to [P03](./03-model-router.md).
+- **Caching** belongs to [P11](./11-reliability-capacity.md).
+- **Guardrails, prompt-injection defence and PII handling** belong to [P09](./09-security-safety.md).
+- **Fallbacks across embedding models or search backends** belong to [P02](./02-ai-gateway-routing.md).
 
 ## 2. Capability map
 
@@ -31,7 +31,11 @@ Ownership boundaries matter here:
 | **Vector and metadata storage** | Support nearest-neighbour search plus structured filters | The vector store is not the source of truth; raw documents and lineage still need durable storage |
 | **Retrieval orchestration** | Combine vector search, filters and optional lexical search into the prompt context | Re-ranking is optional, but provenance is not |
 | **Lifecycle management** | Re-index, delete, re-embed and backfill safely | Deletes and ACL changes must propagate to derived chunks |
-| **Quality measurement** | Track freshness, hit quality and citation coverage | Deep evaluation lives in [P07](./07-observability-evaluation.md) |
+| **Quality measurement** | Track freshness, hit quality and citation coverage | Deep evaluation lives in [P08](./08-evaluation-quality.md) |
+| **Memory stores** | Persist user, session and agent facts outside the prompt, with scope, TTL and delete support | Memory is derived data: it needs the same ACL, retention and deletion rules as chunks |
+| **Prompt and context assets** | Keep prompts, system instructions, few-shot sets and tool descriptions versioned, reviewed and released like code | Pin a version in each deployment; evaluate changes before promotion ([P08](./08-evaluation-quality.md)) |
+| **Context-window budgeting** | Decide how many tokens go to instructions, history, memory, retrieved chunks and tool output | Budgets keep cost and tail latency predictable ([P11](./11-reliability-capacity.md)) |
+| **Graph and hybrid retrieval** | Add entity and relationship traversal or lexical plus vector fusion where plain top-k fails | Optional; adopt after parsing and metadata are sound |
 
 ## 3. Tool comparison
 
@@ -48,9 +52,17 @@ Licences were read from each upstream `LICENSE` file, and stars, push dates and 
 | **Broad file-type and ETL convenience** | **Unstructured** (15.6k★) | `OSI` ✅ (Apache-2.0) for the open-source library; the commercial hosted platform is `Not OSS` | Unstructured (company) | Docling (`OSI` ✅ MIT) | Choose **Unstructured** when its connectors or partitioning pipeline fit your estate; keep to the open library, as hosted and enterprise features are separate products |
 | **RAG orchestration framework (optional)** | **LlamaIndex** (52.5k★) | `OSI` ✅ (MIT) | LlamaIndex (company) | Haystack (`OSI` ✅ Apache-2.0; 26.7k★, deepset), hand-written retrieval service | Choose **LlamaIndex** or **Haystack** when you want ready-made loaders, chunkers and retrievers; skip both if the retrieval service from section 4 already fits, since they add a dependency that moves quickly |
 
+Context-engineering additions (licences read from upstream `LICENSE` metadata and stars from the GitHub API on 2026-10-11, **Opened**; none archived, all pushed within the last week):
+
+| Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
+|------------|--------------|---------------|---------|--------------|----------------|
+| **Agent memory layer** | **Mem0** (67.0k★) | `OSI` ✅ (Apache-2.0) | Mem0 (company) | Letta (`OSI` ✅ Apache-2.0; 25.1k★, stateful agent runtime with memory blocks), memory tables in PostgreSQL | Choose **Mem0** when you want a drop-in extract-and-recall memory API for user and agent facts; choose **Letta** when you want the memory model and agent loop managed together; choose **plain PostgreSQL tables** when memory is a short list of typed facts |
+| **Temporal knowledge graph memory** | **Graphiti** (31.6k★) | `OSI` ✅ (Apache-2.0) | Zep (company) | Microsoft GraphRAG (`OSI` ✅ MIT; 36.3k★, batch corpus-level graph indexing) | Choose **Graphiti** when facts change over time and queries need relationships and validity windows; choose **GraphRAG** for offline, corpus-wide summarisation questions where indexing cost is acceptable |
+| **Prompt and context asset versioning** | **Git plus a registry convention** (prompts as files, reviewed via pull request) | n/a | Your platform team | Langfuse prompt management (`Open-core` ⚠️: MIT core with a separate `ee/` directory; confirm the files you need are outside it) | Choose **Git** when prompts ship with the application; choose a **prompt registry** when non-engineers edit prompts or you need labels (dev, staging, prod) without a redeploy |
+
 Notes:
 
-- **Redis and Elasticsearch relicensing.** Redis 8 is tri-licensed (RSALv2, SSPLv1 or AGPL-3.0; 7.2 and earlier are BSD-3-Clause); Valkey (BSD-3-Clause, Linux Foundation) is the permissive fork. Neither is a recommended vector store here. If a cache or key-value store is needed alongside RAG, prefer Valkey and see [P10](./10-reliability-performance.md).
+- **Redis and Elasticsearch relicensing.** Redis 8 is tri-licensed (RSALv2, SSPLv1 or AGPL-3.0; 7.2 and earlier are BSD-3-Clause); Valkey (BSD-3-Clause, Linux Foundation) is the permissive fork. Neither is a recommended vector store here. If a cache or key-value store is needed alongside RAG, prefer Valkey and see [P11](./11-reliability-capacity.md).
 - Default picks are justified by the signals above: pgvector minimises systems to run; Qdrant has the strongest Apache-2.0 filtering story at moderate scale; Milvus is the choice when scale justifies a distributed system. Weaviate is not a default because of its open-core boundary.
 - Vector-store benchmark claims are not reproduced here; measure with your own corpus and filters.
 
@@ -68,7 +80,7 @@ A pragmatic reference design for this pillar is:
 2. **Ingestion worker:** pull changes incrementally, normalise content, compute a content hash and emit canonical document records.
 3. **Parsing stage:** extract text, headings, tables and page boundaries into a structured intermediate form.
 4. **Chunking stage:** create stable chunks with deterministic IDs, offsets, section paths and ACL metadata.
-5. **Embedding stage:** call the platform's chosen embedding model through the same governed path used for other models ([P02](./02-ai-gateway.md)).
+5. **Embedding stage:** call the platform's chosen embedding model through the same governed path used for other models ([P02](./02-ai-gateway-routing.md)).
 6. **Storage stage:** write chunks and metadata to PostgreSQL; store vectors either in `pgvector` or in a dedicated vector database; keep the document lineage in PostgreSQL even when vectors live elsewhere.
 7. **Retrieval service:** accept a query, apply tenant and ACL filters, run similarity search, optionally combine lexical and vector signals, and return chunks with provenance.
 8. **Application layer:** assemble prompt context, attach citations and pass the request onward to the model path.
@@ -150,7 +162,14 @@ Keep these behaviours from day one:
 
 ### 5.5 Separate retrieval from prompt assembly
 
-The retrieval service should return ranked chunks and metadata. Prompt construction belongs to the application or agent layer. That split makes it easier to test retrieval independently in [P07](./07-observability-evaluation.md).
+The retrieval service should return ranked chunks and metadata. Prompt construction belongs to the application or agent layer. That split makes it easier to test retrieval independently in [P08](./08-evaluation-quality.md).
+
+### 5.6 Add context engineering deliberately
+
+- **Memory stores.** Give every memory record an owner (user, tenant or agent), a scope, a source (which conversation wrote it), a TTL and a delete path. Write memory asynchronously and read it through the same retrieval service, so ACL filters apply. Agent runtime state and approvals stay in [P06](./06-agents-mcp.md); this pillar owns recall of durable facts.
+- **Prompt and context assets.** Treat system prompts, templates, few-shot examples and tool descriptions as versioned artefacts with an owner and a changelog. Reference an immutable version (Git SHA or registry version) from each deployment, record it in traces ([P07](./07-observability-evaluation.md)) and gate promotion on the regression set in [P08](./08-evaluation-quality.md).
+- **Context-window budgeting.** Set a per-request token budget split across fixed instructions, conversation history, memory, retrieved chunks and tool output. Truncate or summarise history first, cap tool output, and drop the lowest-ranked chunks before the highest-value instructions. Track average and p95 context tokens per route, since they drive cost ([P10](./10-governance-finops.md)) and TTFT ([P11](./11-reliability-capacity.md)).
+- **GraphRAG and hybrid retrieval.** Reach for graph retrieval when questions are about relationships or need multi-hop answers across documents, and for hybrid (lexical plus vector, then optional re-rank) when identifiers and exact terms matter. Both add indexing cost and a second index to keep in sync; prove the gain on the gold set first.
 
 ## 6. Operations
 
@@ -167,7 +186,7 @@ Operate the retrieval layer like a data product:
 Operational heuristics:
 
 - When quality drops after a model change, check **embedding compatibility** before changing chunk sizes.
-- When latency rises, check **filter selectivity and index health** before introducing caching; caching strategy belongs to [P10](./10-reliability-performance.md).
+- When latency rises, check **filter selectivity and index health** before introducing caching; caching strategy belongs to [P11](./11-reliability-capacity.md).
 - When answers leak unrelated documents, assume an **ACL design bug** before blaming the model.
 
 ## 7. Pitfalls
@@ -180,7 +199,10 @@ Common failures are architectural, not mathematical:
 - **Ignoring incremental sync.** Nightly full rebuilds look simple until the corpus or embedding bill grows.
 - **Mixing tenants in one flat namespace without tested filters.** This creates the worst class of RAG failure: silent data exposure.
 - **Expecting higher `top_k` to solve poor ingestion.** More chunks usually mean more noise.
-- **Solving prompt injection only in retrieval.** Retrieval can reduce exposure, but the main controls belong to [P08](./08-security.md).
+- **Unscoped agent memory.** Memory written without owner, scope or TTL becomes a cross-user leak and a deletion problem.
+- **Untracked prompt edits.** A prompt changed in a console with no version, owner or evaluation is an unreviewed production change.
+- **Stuffing the context window.** More tokens raise cost and latency and often lower answer quality; budget instead.
+- **Solving prompt injection only in retrieval.** Retrieval can reduce exposure, but the main controls belong to [P09](./09-security-safety.md).
 
 ## 8. Checklist
 
@@ -200,15 +222,21 @@ Common failures are architectural, not mathematical:
 - [ ] Retrieval metrics exported: latency, empty-result rate, freshness lag, citation coverage
 - [ ] ACL and tenant isolation covered by automated tests
 - [ ] Re-index and re-embedding runbooks documented
+- [ ] Prompts and system instructions stored in Git or a registry with versions and owners
+- [ ] Per-route context-token budget defined and monitored
+- [ ] Any agent memory store has scope, TTL and delete support
 
 ### Enterprise
 
 - [ ] Separate lifecycle for parse changes, embedding changes and schema changes
 - [ ] Dedicated vector service justified by scale, isolation or SLOs
 - [ ] Corpus ownership, legal delete requirements and data retention mapped per source
-- [ ] Gold evaluation sets linked to release gates in [P07](./07-observability-evaluation.md)
+- [ ] Gold evaluation sets linked to release gates in [P08](./08-evaluation-quality.md)
 - [ ] Disaster-recovery plan validated for both metadata and vector layers
 - [ ] Cross-region or multi-cluster replication requirements explicitly decided
+- [ ] Prompt and context releases gated by evaluation and recorded in the audit trail
+- [ ] Memory retention, user-delete and cross-tenant isolation tested
+- [ ] Graph or hybrid retrieval adopted only where the gold set shows a measured gain
 
 ## 9. Sources
 
@@ -228,5 +256,7 @@ The links below are the primary upstreams. Licences and stars were read from the
 - [Haystack repository](https://github.com/deepset-ai/haystack)
 - [Docling repository](https://github.com/docling-project/docling)
 - [Unstructured repository](https://github.com/Unstructured-IO/unstructured)
+- [Mem0](https://github.com/mem0ai/mem0), [Letta](https://github.com/letta-ai/letta), [Graphiti](https://github.com/getzep/graphiti) and [Microsoft GraphRAG](https://github.com/microsoft/graphrag)
+- [Langfuse](https://github.com/langfuse/langfuse) (prompt management)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
 - [CNCF landscape source](https://github.com/cncf/landscape/blob/master/landscape.yml)
