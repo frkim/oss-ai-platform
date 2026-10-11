@@ -94,7 +94,7 @@ spec:
     spec:
       containers:
         - name: vllm
-          image: vllm/vllm-openai:latest
+          image: vllm/vllm-openai:<pinned-version>
           args:
             - --model=/models/llama-8b
             - --served-model-name=llama-8b

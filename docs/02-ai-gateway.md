@@ -117,7 +117,7 @@ Mount or sync this from the secret system described in [P12](./12-foundation-inf
 
 ```bash
 curl -sS https://ai.example.com/v1/chat/completions \
-  -H 'Authorization: ******' \
+  -H "Authorization: Bearer $VIRTUAL_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "team-default-chat",

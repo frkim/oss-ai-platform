@@ -146,7 +146,7 @@ Prefer a small set of route classes over hundreds of bespoke headers.
 
 ```bash
 curl -sS https://ai.example.com/v1/chat/completions \
-  -H 'Authorization: ******' \
+  -H "Authorization: Bearer $VIRTUAL_KEY" \
   -H 'X-Tenant-Tier: enterprise' \
   -H 'Content-Type: application/json' \
   -d '{

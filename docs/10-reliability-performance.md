@@ -76,8 +76,8 @@ slos:
     objective: 99.9
     sli:
       events:
-        error_query: sum(rate(http_requests_total{job="ai-gateway",code=~"5.."}[5m]))
-        total_query: sum(rate(http_requests_total{job="ai-gateway"}[5m]))
+        error_query: sum(rate(http_requests_total{job="ai-gateway",code=~"5.."}[{{.window}}]))
+        total_query: sum(rate(http_requests_total{job="ai-gateway"}[{{.window}}]))
 ```
 
 Implementation advice:
