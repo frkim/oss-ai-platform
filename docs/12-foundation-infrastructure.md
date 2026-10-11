@@ -2,7 +2,7 @@
 
 > **TL;DR** — Foundation and delivery is the substrate the rest of the platform stands on: Kubernetes, networking, storage, GitOps, certificates, packaging and infrastructure as code. Good choices here make every other pillar easier to operate and easier to replace.
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Reference architecture](./01-reference-architecture.md) · [Model serving](./03-model-serving.md) · [Reliability and performance](./11-reliability-capacity.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Reference architecture](./01-reference-architecture.md) · [Model serving](./03-model-serving.md) · [Reliability, performance and capacity](./11-reliability-capacity.md) · [Platform experience and tenancy](./13-platform-experience.md)*
 
 ## 1. Why it matters
 
@@ -18,22 +18,22 @@ This pillar owns:
 - certificate management and batch-queue primitives;
 - the infrastructure licence watch-list.
 
-It does **not** own guardrails or PII policy; those belong to [Security](./09-security-safety.md). It also does not own caching policy; that belongs to [Reliability and performance](./11-reliability-capacity.md). Secret *plumbing* appears here as infrastructure, but secret *policy* belongs to [Security](./09-security-safety.md).
+It does **not** own tenancy design (namespace, vcluster and hierarchical models), which belongs to [P13](./13-platform-experience.md), though the cluster substrate here must support it. It also does not own guardrails, PII policy or workload and node hardening; those belong to [Security and safety](./09-security-safety.md). It also does not own caching policy; that belongs to [Reliability, performance and capacity](./11-reliability-capacity.md). Secret *plumbing* appears here as infrastructure, but secret *policy* belongs to [Security and safety](./09-security-safety.md).
 
 ## 2. Capability map
 
 | Capability | What good looks like | Default building block | Boundary |
 |------------|----------------------|------------------------|----------|
 | Cluster substrate | Every environment is reproducible and declarative | Kubernetes | AI-specific runtime choices still belong to [P03](./03-model-serving.md) |
-| Traffic contract | Gateways and routes use standard Kubernetes APIs where possible | Gateway API | Product routing policy belongs to [P02](./02-ai-gateway-routing.md) and [P02](./02-ai-gateway-routing.md) |
-| Cluster networking | One network layer handles policy, service reachability and observability cleanly | Cilium | Hardening policy details belong to [P09](./09-security-safety.md) |
+| Traffic contract | Gateways and routes use standard Kubernetes APIs where possible | Gateway API | Product routing policy belongs to [P02](./02-ai-gateway-routing.md) |
+| Cluster networking | One network layer handles policy, service reachability and observability cleanly | Cilium | Network hardening policy belongs to [P09](./09-security-safety.md) |
 | Persistent storage | Stateful platform services have a clear object, block and backup story | Rook/Ceph by default | MinIO's community repository is archived and no longer maintained (verified 2026-10-11), so do not choose it for new designs |
 | GitOps delivery | Desired state is promoted through Git and continuously reconciled | Argo CD or Flux | Release approval process belongs to [P10](./10-governance-finops.md) |
 | Infrastructure as code | Shared environments are created from reviewable, reusable definitions | OpenTofu | Governance of exceptions still belongs to [P10](./10-governance-finops.md) |
 | Control-plane composition | Product teams request higher-level platform resources instead of raw cloud APIs | Crossplane | Keep ownership boundaries clear to avoid shadow platform teams |
 | Packaging | Upstream projects install in a repeatable way | Helm | Kustomize overlays are still useful around Helm |
 | Certificates | Internal and edge-facing certificates are automated | cert-manager | Identity policy still belongs to [P09](./09-security-safety.md) |
-| Batch and queueing | Offline eval, ETL and GPU-heavy jobs do not starve online services | Kueue | Online serving autoscaling still belongs to [P11](./11-reliability-capacity.md) |
+| Batch and queueing | Offline eval, ETL and GPU-heavy jobs do not starve online services | Kueue | Online serving autoscaling and GPU quota and capacity planning belong to [P11](./11-reliability-capacity.md) |
 
 ## 3. Tool comparison table
 

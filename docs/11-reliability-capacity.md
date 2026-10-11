@@ -1,8 +1,8 @@
-# P11. Reliability and performance
+# P11. Reliability, performance and capacity
 
-> **TL;DR** — Reliability for AI systems means more than uptime. It is the combination of clear SLOs, low tail latency, sensible caching, autoscaling for bursty GPU workloads, tested recovery and repeatable benchmarks. This pillar owns caching; routing fallbacks stay with [Model router](./02-ai-gateway-routing.md).
+> **TL;DR** — Reliability for AI systems means more than uptime. It is the combination of clear SLOs, low tail latency, sensible caching, autoscaling for bursty GPU workloads, accelerator capacity planning, tested recovery and repeatable benchmarks. This pillar owns caching and capacity; routing fallbacks stay with [P02](./02-ai-gateway-routing.md).
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Model router](./02-ai-gateway-routing.md) · [Model serving](./03-model-serving.md) · [Observability and evaluation](./07-observability-evaluation.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [AI gateway and routing](./02-ai-gateway-routing.md) · [Model serving](./03-model-serving.md) · [Observability](./07-observability-evaluation.md) · [Governance and FinOps](./10-governance-finops.md)*
 
 ## 1. Why it matters
 
@@ -15,9 +15,11 @@ This pillar owns:
 - caching patterns: exact, semantic, prefix and KV reuse;
 - pod and node autoscaling for bursty inference and agent workloads;
 - recovery, backup and restore drills;
+- accelerator capacity planning: GPU demand forecasting, reservations versus on-demand and spot, quotas, queueing and headroom, and bursting to API providers;
+- cost-performance trade-offs (tokens per GPU-hour at an SLO);
 - load testing and benchmarks.
 
-It does **not** own routing policy such as retries, hedging, fallbacks or canaries; those belong to [Model router](./02-ai-gateway-routing.md). It also does not own gateway quotas; those belong to [AI gateway](./02-ai-gateway-routing.md).
+It does **not** own routing policy such as retries, hedging, fallbacks or canaries; those belong to [P02](./02-ai-gateway-routing.md), which also owns gateway quotas. Cost budgets and showback belong to [P10](./10-governance-finops.md); this pillar supplies the capacity and cost-performance data they use.
 
 ## 2. Capability map
 
@@ -28,9 +30,13 @@ It does **not** own routing policy such as retries, hedging, fallbacks or canari
 | Semantic caching | Near-duplicate prompts can reuse an answer when staleness is acceptable | GPTCache | Use only where wrong-but-similar answers are low risk |
 | Prefix and KV reuse | Shared prompt prefixes and long contexts do not recompute everything for every request | LMCache or engine-native prefix caching | Engine internals still belong to [P03](./03-model-serving.md) |
 | Pod autoscaling | Worker replicas follow real load signals, not only CPU | KEDA | Queueing and scheduling still depend on [P03](./03-model-serving.md) and [P12](./12-foundation-infrastructure.md) |
-| Node autoscaling | GPU and CPU node groups scale quickly enough for model mix and startup time | Karpenter or Cluster Autoscaler | Capacity planning remains an operational process |
+| Node autoscaling | GPU and CPU node groups scale quickly enough for model mix and startup time | Karpenter or Cluster Autoscaler | Forecasting and reservations are covered in the next rows |
+| GPU demand forecasting | Peak and average accelerator demand per model, tenant and batch job is forecast from tokens per second and growth | Prometheus and DCGM data, plus a capacity model (spreadsheet or notebook) | Telemetry in [P07](./07-observability-evaluation.md); budgets in [P10](./10-governance-finops.md) |
+| Capacity mix | Baseline load runs on reservations or commitments; spikes on on-demand or spot; interruptible jobs on spot | Cloud commitments plus node pools by price class | Commercial terms are a FinOps decision in [P10](./10-governance-finops.md) |
+| Quota and queueing | Teams share GPUs fairly; batch and fine-tuning jobs queue instead of starving serving | Kueue | Fine-tuning workloads are defined in [P04](./04-model-lifecycle-adaptation.md) |
+| Headroom and burst | A defined buffer absorbs spikes; overflow goes to API providers when local capacity is exhausted | Warm replicas plus a gateway overflow route | Routing and fallback rules live in [P02](./02-ai-gateway-routing.md) |
 | Backup and restore | Metadata stores, cluster objects and persistent volumes can be restored together | Velero | Object storage platform choice belongs to [P12](./12-foundation-infrastructure.md) |
-| Benchmarking | Teams can compare prompt shapes, concurrency and model mixes before rollout | GuideLLM or k6 plus engine-specific benchmarks | Eval quality metrics still belong to [P07](./07-observability-evaluation.md) |
+| Benchmarking | Teams can compare prompt shapes, concurrency and model mixes before rollout | GuideLLM or k6 plus engine-specific benchmarks | Eval quality metrics belong to [P08](./08-evaluation-quality.md) |
 | Failure injection | Autoscaling, restore and degradation paths are exercised on purpose, not discovered in incidents | Chaos Mesh or Litmus | Run in staging first; routing fallbacks stay with [P02](./02-ai-gateway-routing.md) |
 
 ## 3. Tool comparison table
@@ -43,6 +49,7 @@ Licences, stars and archived flags were read from upstream repositories on 2026-
 | SLO dashboard and alert workflow | **Pyrra** | OSI (`Apache-2.0`; 1.6k★) | Pyrra maintainers | Sloth (`Apache-2.0`), custom dashboards | you want a lightweight SLO UI and multi-window burn-rate workflows |
 | Prefix and KV cache reuse | **LMCache** | OSI (`Apache-2.0`; 12.0k★) | LMCache maintainers | engine-native prefix cache, shared memory KV layers | long prompts or shared system prefixes dominate TTFT and cost |
 | Semantic cache | **GPTCache** | OSI (`MIT`; 8.2k★) | GPTCache maintainers (Zilliz) | exact cache, provider-side cache features, gateway-native semantic caching | similar questions repeat often and the answer can tolerate bounded staleness; its last tagged release is August 2024, so confirm it fits your stack or prefer a gateway-native cache from [P02](./02-ai-gateway-routing.md) |
+| Job queueing and GPU quota | **Kueue** | OSI (`Apache-2.0`; 3.1k★) | Kubernetes SIGs (`kubernetes-sigs/kueue`; SIG Scheduling and WG Batch) | Volcano (`Apache-2.0`, see [P12](./12-foundation-infrastructure.md)), native ResourceQuota only | several teams share a GPU pool and need quotas, borrowing between queues, fair sharing and preemption for batch, fine-tuning and eval jobs; online serving still scales through KEDA or HPA |
 | Event-driven autoscaling | **KEDA** | OSI (`Apache-2.0`; 10.6k★) | KEDA project; CNCF Graduated | HPA with custom metrics, queue-native scalers | scale triggers come from queues, Prometheus or custom external metrics |
 | Node autoscaling | **Karpenter** | OSI (`Apache-2.0`; 2.2k★) | Kubernetes SIGs (`kubernetes-sigs/karpenter`) | Cluster Autoscaler (`Apache-2.0`) | you need rapid provisioning and heterogeneous node shapes for mixed inference workloads; provider support varies, so check your cloud's provider |
 | Backup and restore | **Velero** | OSI (`Apache-2.0`; 10.3k★) | Velero maintainers; CNCF Sandbox (repository now `velero-io/velero`) | storage snapshots, GitOps rebootstrap | cluster objects and persistent volumes must be restored in a coordinated way |
@@ -68,6 +75,8 @@ A strong default design uses layered controls:
 5. Scale nodes from pending capacity, startup times and model-placement constraints.
 6. Backup metadata stores and cluster state, then run restore drills often enough that the runbook stays real.
 7. Benchmark representative prompt shapes before and after major model, prompt or routing changes.
+8. Plan accelerator capacity: forecast demand per model and tenant, cover the baseline with reservations, serve spikes from on-demand or spot, queue interruptible jobs through Kueue and keep explicit headroom.
+9. Define the overflow path: when local GPUs are saturated, the gateway ([P02](./02-ai-gateway-routing.md)) sends eligible traffic to an API provider, subject to data-class policy ([P09](./09-security-safety.md)) and a budget cap ([P10](./10-governance-finops.md)).
 
 The outcome you want is simple: predictable latency under normal load, graceful degradation under burst and a known recovery path after failure.
 
@@ -95,6 +104,16 @@ Implementation advice:
 - Scale from queue and concurrency signals before CPU. GPU inference often saturates long before CPU metrics show stress.
 - Run load tests with realistic prompt lengths and streaming behaviour; synthetic short prompts can produce dangerously optimistic numbers.
 
+### Capacity planning
+
+- **Forecast** demand in tokens per second (input and output separately) per model and tenant. Convert to GPUs with a measured tokens-per-GPU figure at your SLO from GuideLLM runs, not vendor peak numbers.
+- **Mix:** commit (reservation or savings plan) only to the steady baseline, for example the p50 of the last 4 to 8 weeks; use on-demand for diurnal peaks; use spot only for interruptible work such as batch eval, embedding backfills and fine-tuning, with checkpointing.
+- **Quota:** request cloud GPU quota well ahead of launches, since approval and delivery can take weeks; track quota as a risk item per region and SKU.
+- **Headroom:** keep a stated buffer (for example 20 to 30 percent of peak, tuned from your startup time and burst shape) and warm replicas for models with slow start.
+- **Queues:** give each team a Kueue `ClusterQueue` with a nominal GPU quota, allow borrowing, and let batch yield to serving.
+- **Burst to providers:** pre-approve overflow routes in the gateway for non-sensitive data classes, with a spend cap; test them in game days.
+- **Cost-performance:** report tokens per GPU-hour at the SLO per model and engine configuration; feed it to [P10](./10-governance-finops.md) unit economics and to model-selection decisions in [P04](./04-model-lifecycle-adaptation.md).
+
 ## 6. Operations
 
 Day-2 work should include:
@@ -104,6 +123,7 @@ Day-2 work should include:
 - restore drills for cluster objects and persistent stores;
 - pre-warm plans for known high-traffic launches or batch windows;
 - capacity review for model startup time, image pull time and node provisioning delay;
+- monthly capacity review: forecast versus actual, quota status, reservation coverage and utilisation, spot interruption rate;
 - benchmark baselines kept with the release process, not in a forgotten notebook.
 
 Useful reliability dashboards include:
@@ -113,7 +133,9 @@ Useful reliability dashboards include:
 - queue depth and admission wait time;
 - exact, semantic and prefix-cache hit rates;
 - restore success rate and recovery time objective drill results;
-- autoscaler reaction time versus user-visible latency.
+- autoscaler reaction time versus user-visible latency;
+- GPU utilisation, queue wait per team and reserved versus used capacity;
+- share of traffic served by overflow providers.
 
 ## 7. Pitfalls
 
@@ -123,6 +145,10 @@ Useful reliability dashboards include:
 - Backing up data without ever testing restore.
 - Using benchmark prompts that are too small, too clean or too unlike production traffic.
 - Hiding overload behind retries instead of fixing admission control and capacity planning.
+- Buying reservations for peak demand and paying for idle GPUs the rest of the day.
+- Planning capacity from vendor peak throughput instead of measured tokens per GPU at your SLO.
+- Leaving quota requests until launch week.
+- An overflow route that was never tested or that ignores data-class policy.
 - Forgetting that cache invalidation must follow prompt, policy and corpus changes.
 
 ## 8. Checklist
@@ -134,6 +160,7 @@ Useful reliability dashboards include:
 - [ ] Add exact caching where responses are safely reusable.
 - [ ] Use autoscaling signals tied to real request demand.
 - [ ] Back up the minimum control-plane and metadata components needed to recover service.
+- [ ] Record current GPU count, utilisation and a headroom target.
 
 ### Production
 
@@ -142,6 +169,8 @@ Useful reliability dashboards include:
 - [ ] Introduce semantic caching only on clearly low-risk flows with explicit TTLs.
 - [ ] Run scheduled restore drills and performance regressions.
 - [ ] Benchmark representative prompt shapes before major releases.
+- [ ] GPU demand forecast refreshed monthly; quota requested ahead of launches.
+- [ ] Kueue or equivalent quotas separate serving from batch and fine-tuning.
 
 ### Enterprise
 
@@ -150,6 +179,8 @@ Useful reliability dashboards include:
 - [ ] Pre-compute or pre-warm capacity for major events and batch windows.
 - [ ] Keep multi-region or multi-cluster recovery plans with tested failover criteria.
 - [ ] Tie performance results to release approval and cost review.
+- [ ] Reservation and spot mix reviewed with FinOps ([P10](./10-governance-finops.md)); coverage and utilisation targets set.
+- [ ] Tested overflow route to API providers with data-class and budget limits.
 
 ## 9. Sources
 
@@ -161,6 +192,7 @@ Useful upstream references for this pillar:
 - [GPTCache](https://github.com/zilliztech/GPTCache)
 - [KEDA](https://keda.sh/)
 - [Karpenter](https://karpenter.sh/)
+- [Kueue](https://github.com/kubernetes-sigs/kueue)
 - [Cluster Autoscaler](https://github.com/kubernetes/autoscaler)
 - [Velero](https://velero.io/)
 - [k6](https://k6.io/)

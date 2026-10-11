@@ -1,8 +1,8 @@
-# P06. Agents and MCP
+# P06. Agents, tools and protocols
 
-> **TL;DR** — Standardise tool access before you standardise agent frameworks. Use MCP to expose tools and resources, add A2A only when agents really need to coordinate, and run side-effecting agents with least privilege inside a sandbox you can patch and audit.
+> **TL;DR** — Standardise tool access and agent identity before you standardise agent frameworks. Give every agent its own non-human identity with delegated, short-lived authority, put approval gates on side effects, and use MCP to expose tools and resources, add A2A only when agents really need to coordinate, and run side-effecting agents with least privilege inside a sandbox you can patch and audit.
 
-*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model router](./02-ai-gateway-routing.md) · [Security](./09-security-safety.md) · [Hardening](./09-security-safety.md)*
+*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [AI gateway and routing](./02-ai-gateway-routing.md) · [Knowledge and context](./05-data-knowledge-rag.md) · [Security and safety](./09-security-safety.md) · [Observability](./07-observability-evaluation.md) · [Evaluation](./08-evaluation-quality.md)*
 
 ## 1. Why it matters
 
@@ -24,7 +24,7 @@ Ownership boundaries are important:
 
 - **Fallbacks and retry policy across models or backends** belong to [P02](./02-ai-gateway-routing.md).
 - **Guardrails, prompt-injection defence and content policy** belong to [P09](./09-security-safety.md).
-- **Isolation, sandboxing hardening and supply-chain baseline** belong to [P09](./09-security-safety.md), even though the runtime choices appear here.
+- **Isolation, sandbox hardening and supply-chain baseline** belong to [P09](./09-security-safety.md), even though the runtime choices appear here.
 
 ## 2. Capability map
 
@@ -34,8 +34,11 @@ Ownership boundaries are important:
 | **Agent runtime** | Hold state, plan steps, call tools and wait for approvals | Prefer explicit state machines over hidden recursive loops |
 | **Inter-agent coordination** | Let specialist agents hand off work or request help | A2A is useful only when agents are separate services or teams, not inside one process by default |
 | **Execution sandbox** | Limit filesystem, network, kernel and identity access for tool calls | Choose the sandbox according to the blast radius of the tools, not the elegance of the framework |
-| **Identity and authorisation** | Map user, service and tool identity to least privilege | Short-lived credentials beat shared static secrets |
-| **Memory and state** | Persist what matters between steps without turning prompts into databases | Source-of-truth business state still belongs in normal data stores |
+| **Identity and authorisation** | Map user, service and tool identity to least privilege | Short-lived credentials beat shared static secrets; see section 5.6 for non-human agent identity |
+| **Memory and state** | Persist what matters between steps without turning prompts into databases | Source-of-truth business state still belongs in normal data stores; long-term recall is a [P05](./05-data-knowledge-rag.md) memory store |
+| **Human-in-the-loop** | Pause side-effecting steps for approval and resume with durable state | Approval gates map to risk tiers (section 5.7) |
+| **Agent registry and catalogue** | One inventory of agents, MCP servers and skills with owner, version, scopes and status | Feeds governance records in [P10](./10-governance-finops.md) |
+| **AgentOps hooks** | Emit traces, tool audit events and eval hooks per run, and support replay | Telemetry in [P07](./07-observability-evaluation.md); trajectory evals in [P08](./08-evaluation-quality.md) |
 | **Audit and observability** | Record tool calls, approvals, inputs, outputs and trace IDs | Deep telemetry lives in [P07](./07-observability-evaluation.md) |
 
 ## 3. Tool comparison
@@ -51,6 +54,8 @@ Licences and stars were read from upstream repositories on 2026-10-11 (**Opened*
 | **Sandbox with low friction** | **gVisor** (19.6k★) | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **gVisor** when syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM |
 | **Sandbox with stronger VM-style isolation** | **Kata Containers** (8.9k★) | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **Kata Containers** when the side-effecting tools are high risk and the platform can afford the stronger isolation boundary |
 | **Per-agent sandbox lifecycle on Kubernetes** | **agent-sandbox** (4.2k★) | `OSI` ✅ (Apache-2.0) | Kubernetes SIGs (`kubernetes-sigs`) | Plain `RuntimeClass` pods (section 5.4), gVisor or Kata underneath | Choose **agent-sandbox** when you need many isolated, stateful, pausable sandboxes created per agent session through a Kubernetes API; it manages lifecycle and sits on top of gVisor or Kata rather than replacing them. Project maturity is **Unverified** |
+| **Workload identity for agents** | **SPIFFE/SPIRE** (SPIRE 2.6k★) | `OSI` ✅ (Apache-2.0) | CNCF Graduated (search-cited) | Cloud-provider workload identity (for example Kubernetes projected service-account tokens with OIDC federation), mesh-issued identity | Choose **SPIFFE/SPIRE** when agents and tool servers span clusters or clouds and need a vendor-neutral, short-lived, attested workload identity; use **projected service-account tokens** when one cluster and one IdP are enough. Delegation to users uses OAuth 2.0 Token Exchange (RFC 8693), see section 5.6 |
+| **Agent and MCP registry** | **agentregistry** (0.5k★) | `OSI` ✅ (Apache-2.0) | Solo.io-led project (search-cited); governance status **Unverified** | Official MCP Registry (7.3k★; licence read as `NOASSERTION`, so check the file), Backstage catalogue entries ([P13](./13-platform-experience.md)), a Git-backed catalogue | Choose **agentregistry** when you want one curated, versioned inventory of agents, MCP servers and skills with approval workflow; the project is young (**Unverified** maturity), so a **Git-backed catalogue** plus the portal is a safe start |
 | **MCP and agent gateway layer** | **agentgateway** (5.3k★) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Choose **agentgateway** when you want an open MCP/A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one; choose a **thin internal gateway** when you only need an allow-list and audit log. LLM-traffic gateways are owned by [P02](./02-ai-gateway-routing.md) |
 
 Note: Microsoft AutoGen (61.3k★) is in maintenance mode, community-managed and pointing new users to Microsoft Agent Framework (read from its README), so it is not listed as an option. The repository `LICENSE` shows `CC-BY-4.0` for documentation; check the code licence file before reuse.
@@ -140,7 +145,24 @@ Then bind only the write-capable executor workloads to that `RuntimeClass`. Stro
 
 ### 5.5 Keep business state outside the prompt loop
 
-Agent memory is useful for local reasoning state, but durable facts still belong in normal databases, queues and ticketing systems. If an action matters later, record it in a system of record the platform already backs up and audits.
+Agent memory is useful for local reasoning state, but durable facts still belong in normal databases, queues and ticketing systems. If an action matters later, record it in a system of record the platform already backs up and audits. Long-term recall of user or agent facts is a memory store owned by [P05](./05-data-knowledge-rag.md); the runtime here owns only checkpointed step state.
+
+### 5.6 Give agents their own identity and delegated authority
+
+- **Non-human identity.** Each agent (not each framework or team) gets a distinct workload identity, for example a SPIFFE ID such as `spiffe://corp/agent/<name>`, with an owner and an expiry. Never reuse a human account or a shared API key.
+- **Delegated authority.** When an agent acts for a user, exchange the user's token for a narrow, short-lived, audience-restricted token using OAuth 2.0 Token Exchange (RFC 8693), so the tool sees both the user (`sub`) and the agent (`act`). The MCP authorisation specification builds on OAuth 2.1 with resource indicators; verify current spec details before implementing.
+- **Least privilege per tool.** Scope tokens to one MCP server and the minimum operations; keep read and write scopes separate.
+- **Revocation.** Short lifetimes plus a kill switch per agent identity make break-glass practical.
+- **Policy and audit.** Enforce at the MCP gateway; policy language and evidence belong to [P09](./09-security-safety.md) and [P10](./10-governance-finops.md).
+
+### 5.7 Add human-in-the-loop approval gates
+
+Classify tools by risk tier (read, reversible write, irreversible or external write, financial or privileged). Auto-run the first tier, require approval for the others, and forbid the last in autonomous mode. The runtime pauses at an interrupt, persists state, records approver, time and the exact arguments approved, and resumes after a decision or times out safely. Approvals expire; a stale approval must not authorise a changed action.
+
+### 5.8 Register agents and wire AgentOps hooks
+
+- **Registry.** Every production agent, MCP server and skill has a catalogue record: owner, version, purpose, risk tier, granted scopes, data classes, model families and status. Reconcile it against what is deployed; unregistered agents are blocked at the gateway.
+- **AgentOps hooks.** Emit one trace per run with spans for model calls, tool calls, approvals and A2A handoffs ([P07](./07-observability-evaluation.md)); store enough state to replay a run; export trajectories to the evaluation pipeline for trajectory and task-success evals and regression gates ([P08](./08-evaluation-quality.md)); and report tokens and tool cost per agent for showback ([P10](./10-governance-finops.md)).
 
 ## 6. Operations
 
@@ -148,6 +170,7 @@ Operating agent systems is mostly about narrowing blast radius:
 
 - **Tool catalogue management:** approve, version and retire tools deliberately.
 - **Credential rotation:** use short-lived credentials wherever possible; rotate shared secrets aggressively if you cannot avoid them yet.
+- **Registry hygiene:** review owners, scopes and last-used dates; retire dormant agents and revoke their identities.
 - **Approval policy:** define which actions need human approval, which can auto-run, and which are forbidden.
 - **Tracing:** propagate one trace ID across model calls, tool calls and any A2A handoffs into [P07](./07-observability-evaluation.md).
 - **Timeouts and budgets:** bound steps, total runtime, token budgets and external call counts.
@@ -168,6 +191,8 @@ Operational heuristics:
 - **Using A2A for every internal call.** It adds protocol overhead where a queue or normal service call would do.
 - **Skipping human approval for side effects.** Fast automation is still risk if the target system changes state.
 - **Relying on the framework's defaults for retry or fallback behaviour.** Those policies belong in [P02](./02-ai-gateway-routing.md).
+- **Sharing one service account across agents.** Audit logs then cannot say which agent acted or for whom.
+- **Approvals that approve a category, not an action.** Approve the exact arguments, with an expiry.
 - **Assuming sandboxing solves prompt injection.** The primary defences still live in [P09](./09-security-safety.md).
 
 ## 8. Checklist
@@ -179,6 +204,7 @@ Operational heuristics:
 - [ ] Read-only and write-capable tools split by credential and endpoint
 - [ ] Tool allow-list and audit logging in place
 - [ ] At least one human approval checkpoint for side-effecting workflows
+- [ ] Each agent has its own identity, not a shared key
 
 ### Production
 
@@ -188,11 +214,16 @@ Operational heuristics:
 - [ ] Per-tool quotas, timeouts and retry policies documented
 - [ ] Tool owners, lifecycle and deprecation process defined
 - [ ] Prompt-injection and data-exfiltration controls linked from [P09](./09-security-safety.md)
+- [ ] Agent and MCP registry with owner, version, risk tier and scopes
+- [ ] Run traces and trajectories exported to [P07](./07-observability-evaluation.md) and [P08](./08-evaluation-quality.md)
 
 ### Enterprise
 
 - [ ] Optional A2A adopted only where cross-team or cross-runtime handoffs are real
 - [ ] Fine-grained service identity and short-lived credentials used for tool calls
+- [ ] Delegated user authority via token exchange, with the acting agent recorded
+- [ ] Approval tiers mapped to risk, with expiry and recorded approver
+- [ ] Registry reconciled against deployed agents; unregistered agents blocked
 - [ ] Agent action approvals mapped to business risk levels
 - [ ] Sandboxing and base images patched through the same release process as the rest of the platform
 - [ ] Multi-tenant agent isolation requirements explicitly tested
@@ -209,6 +240,8 @@ Primary upstreams:
 - [kagent repository](https://github.com/kagent-dev/kagent)
 - [CrewAI](https://github.com/crewAIInc/crewAI), [OpenAI Agents SDK](https://github.com/openai/openai-agents-python), [Google ADK](https://github.com/google/adk-python), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) and [AutoGen](https://github.com/microsoft/autogen)
 - [agentgateway](https://github.com/agentgateway/agentgateway) and [IBM ContextForge](https://github.com/IBM/mcp-context-forge)
+- [SPIRE](https://github.com/spiffe/spire) and [SPIFFE](https://spiffe.io/); [RFC 8693 OAuth 2.0 Token Exchange](https://www.rfc-editor.org/rfc/rfc8693)
+- [agentregistry](https://github.com/agentregistry-dev/agentregistry) and [MCP Registry](https://github.com/modelcontextprotocol/registry)
 - [gVisor repository](https://github.com/google/gvisor)
 - [Kata Containers repository](https://github.com/kata-containers/kata-containers)
 - [kubernetes-sigs/agent-sandbox repository](https://github.com/kubernetes-sigs/agent-sandbox)

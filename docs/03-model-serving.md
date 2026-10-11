@@ -1,8 +1,8 @@
-# P03. Model serving
+# P03. Model serving and inference
 
-> **TL;DR** — Model serving is the runtime layer that turns model artifacts and scarce accelerators into stable, observable inference endpoints. The best default for a Kubernetes-first platform is a serving control plane such as KServe paired with a proven engine such as vLLM, while keeping routing, caching and artifact hardening in their owning pillars.
+> **TL;DR** — Model serving is the runtime layer that turns model artifacts and scarce accelerators into stable, observable inference endpoints. The best default for a Kubernetes-first platform is a serving control plane such as KServe paired with a proven engine such as vLLM, plus an inference-aware endpoint picker once you run several replicas. Policy routing, caching and artifact hardening stay in their owning pillars.
 
-*Snapshot: 2026-10-11 · Related: [Model router](./02-ai-gateway-routing.md) · [Reliability and performance](./11-reliability-capacity.md) · [Hardening](./09-security-safety.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./15-tool-landscape.md)*
+*Snapshot: 2026-10-11 · Related: [AI gateway and routing](./02-ai-gateway-routing.md) · [Reliability and performance](./11-reliability-capacity.md) · [Security and safety](./09-security-safety.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./15-tool-landscape.md)*
 
 ## 1. Why it matters
 
@@ -13,14 +13,15 @@ This pillar owns the parts that actually run inference:
 - inference engines and model runtimes;
 - Kubernetes-native serving control planes;
 - GPU and accelerator placement concerns relevant to inference;
-- autoscaling inputs and rollout patterns for model endpoints; and
+- autoscaling inputs and rollout patterns for model endpoints;
+- inference-aware routing and scheduling inside the cluster (replica choice by load, cache locality and prefill/decode role); and
 - the operational envelope around model artifacts, warm capacity and endpoint health.
 
 This pillar does **not** own:
 
-- **route selection, retries and fallbacks** → [P02 Model router](./02-ai-gateway-routing.md);
+- **policy routing, retries, fallbacks and canaries across backends** → [P02 AI gateway and routing](./02-ai-gateway-routing.md);
 - **caching and hedging** → [P11 Reliability and performance](./11-reliability-capacity.md);
-- **artifact signing, tenant isolation and SBOM policy** → [P09 Hardening](./09-security-safety.md).
+- **artifact signing, tenant isolation and SBOM policy** → [P09 Security and safety](./09-security-safety.md).
 
 ## 2. Capability map
 
@@ -32,7 +33,8 @@ This pillar does **not** own:
 | Accelerator placement | GPU requests, node selection and scheduling choices fit the workload shape | P03 owns the serving-side requirements; [P12](./12-foundation-infrastructure.md) owns base cluster enablement |
 | Autoscaling | Scale decisions use useful signals such as concurrency, queue depth or custom metrics | P03 owns endpoint scaling inputs |
 | Rollouts | New weights, engines or serving configs can be promoted and rolled back safely | P03 owns endpoint rollout mechanics |
-| Disaggregated inference | Prefill and decode can be split when that architecture is justified | P03 owns the serving architecture; P02 consumes the exposed routing signals |
+| Inference-aware routing | An endpoint picker chooses a replica using queue depth, KV-cache locality and load | P03 owns it (section 5); P02 forwards tenant and route hints |
+| Disaggregated inference | Prefill and decode can be split when that architecture is justified | P03 owns the serving architecture and its scheduler; P02 never sees the split |
 
 ## 3. Tool comparison
 
@@ -58,7 +60,7 @@ A solid serving design usually has five parts.
 2. **Serving control plane.** KServe or a similar layer creates and updates endpoints declaratively.
 3. **Inference engine pods.** vLLM, SGLang, LMDeploy, TensorRT-LLM, Dynamo or another engine loads the model and serves traffic (TGI only for existing deployments).
 4. **Accelerator-aware scheduling.** Nodes, GPU classes and autoscaling policies fit the memory and throughput profile of each endpoint.
-5. **Feedback to the router.** Health, queue depth and warm-capacity signals flow to [P02](./02-ai-gateway-routing.md).
+5. **Endpoint picker and feedback.** Health, queue depth and cache signals drive replica choice (section 5) and are exposed to the gateway in [P02](./02-ai-gateway-routing.md).
 
 A common progression is:
 
@@ -69,15 +71,42 @@ A common progression is:
 Keep these boundaries clear:
 
 - model artifact approval is not the same as model runtime deployment;
-- routing signals may come from serving, but routing policy still belongs in [P02](./02-ai-gateway-routing.md);
+- replica-level routing signals come from serving, but route policy across backends (tenant, fallback, canary) belongs in [P02](./02-ai-gateway-routing.md);
 - KV-cache and semantic caching are performance concerns in [P11](./11-reliability-capacity.md), even though engines expose some of the mechanics;
 - isolation and provenance controls belong in [P09](./09-security-safety.md).
 
-## 5. Implementation guide
+## 5. Inference-aware routing and scheduling
+
+Generic load balancing (round robin, least connections) treats LLM replicas as interchangeable. They are not: each replica holds a different KV cache, a different queue and possibly a different role. Choosing the replica well is a serving concern, so it lives here; [P02](./02-ai-gateway-routing.md) decides which model class and backend pool a request may use, and this section decides which replica in that pool serves it.
+
+| Technique | What it does | Signal it needs |
+|-----------|--------------|-----------------|
+| Endpoint picker | Replaces blind load balancing: the gateway asks a scheduler for the best replica per request | Queue depth, running requests, KV-cache utilisation, loaded LoRA adapters |
+| KV-cache-aware (prefix-aware) routing | Sends requests that share a prompt prefix (system prompt, RAG context, chat history) to the replica already holding that cache, cutting time to first token | Prefix or cache-locality index from the engine |
+| Prefill/decode disaggregation | Runs compute-bound prefill and memory-bound decode on separate pools, with KV cache transferred between them | Per-role pools, fast interconnect, a scheduler that pairs them |
+| Load- and criticality-aware scheduling | Prefers less loaded replicas and protects latency-critical traffic from batch traffic | Request priority, per-replica load |
+
+Tools (labels and stars **Opened** from GitHub on 2026-10-11; "choose when" is editorial):
+
+| Tool | Licence label | Steward | Role | Choose X when... |
+|------|---------------|---------|------|------------------|
+| **Gateway API Inference Extension** (~0.8k★) | OSI ✅ Apache-2.0 | kubernetes-sigs | **Default** endpoint picker (an `InferencePool` plus endpoint-picker extension) | You run self-hosted vLLM-class replicas behind a Gateway API implementation and want queue-, cache- and adapter-aware selection. It is an extension, not a standalone router, so it needs a conformant gateway: kgateway and Agent Router are candidates (**Unverified**, check your implementation's conformance and the project's current API version before adoption). |
+| **llm-d** (~4.8k★) | OSI ✅ Apache-2.0 | llm-d community | Alternative (prebuilt stack) | You want a vLLM-based reference stack that packages the Inference Extension scheduler, KV-cache-aware routing and prefill/decode disaggregation, rather than assembling them yourself. Evaluate its operational weight against your scale. |
+| **NVIDIA Dynamo** (~8.3k★) | OSI ✅ Apache-2.0 | NVIDIA | Alternative | Your fleet is NVIDIA-only and you want datacentre-scale disaggregated serving with KV-aware routing (see section 3). |
+
+Adoption order:
+
+1. Start with a plain Service and measure TTFT and tail latency per replica.
+2. Add the endpoint picker when you have several replicas of the same model and shared prefixes (long system prompts, RAG, multi-turn chat) or multiple LoRA adapters.
+3. Evaluate disaggregation only when prompt lengths and concurrency are high enough that prefill interference hurts decode latency; it adds pools, interconnect needs and a transfer path to operate. Benchmark with your own traffic; no benchmark numbers are claimed here.
+
+Interfaces with other pillars: the gateway in [P02](./02-ai-gateway-routing.md) forwards the request and tenant headers and may send a model or adapter hint; fallback to another pool or a provider API stays in P02; cache-hit and queue metrics go to [P07](./07-observability-evaluation.md); semantic and response caching remain in [P11](./11-reliability-capacity.md) (KV-cache reuse here is an engine-level optimisation, not a response cache); gang scheduling for multi-node pools is in [P12](./12-foundation-infrastructure.md).
+
+## 6. Implementation guide
 
 Start with a plain runtime deployment you can observe, then wrap it in more platform machinery.
 
-### 5.1 A minimal vLLM deployment on Kubernetes
+### 6.1 A minimal vLLM deployment on Kubernetes
 
 ```yaml
 apiVersion: apps/v1
@@ -110,7 +139,7 @@ spec:
 
 This is intentionally plain Kubernetes. If you later adopt KServe, point its endpoint lifecycle at the same style of runtime container.
 
-### 5.2 Expose the runtime internally
+### 6.2 Expose the runtime internally
 
 ```yaml
 apiVersion: v1
@@ -126,7 +155,7 @@ spec:
       targetPort: 8000
 ```
 
-### 5.3 Verify the endpoint before adding routing layers
+### 6.3 Verify the endpoint before adding routing layers
 
 ```bash
 kubectl rollout status deploy/vllm-llama-8b -n ai-platform
@@ -135,7 +164,7 @@ kubectl get svc vllm-llama-8b -n ai-platform
 
 Before adding canaries, fallbacks or burst paths, confirm the runtime is stable on its own: model load time, memory fit, first-token latency and steady-state throughput.
 
-## 6. Operations
+## 7. Operations
 
 Serving incidents often look like routing incidents from the outside. Distinguish them quickly.
 
@@ -156,7 +185,7 @@ Operational habits that pay off:
 - maintain at least one known-good rollback image or runtime spec; and
 - alert on queue depth, TTFT and error rate together, not on CPU alone.
 
-## 7. Pitfalls
+## 8. Pitfalls
 
 - **Choosing an engine by popularity alone.** The right engine depends on model family, prompt shape and hardware mix.
 - **Ignoring warm capacity.** A single replica that loads slowly can make an otherwise healthy platform feel broken.
@@ -166,7 +195,7 @@ Operational habits that pay off:
 - **Expecting the router to compensate for cold or unstable runtimes.** [P02](./02-ai-gateway-routing.md) can shift traffic; it cannot fix a bad engine rollout.
 - **Letting every team pick its own runtime flags.** Shared platforms need a supported profile, not infinite per-team tuning freedom.
 
-## 8. Checklist
+## 9. Checklist
 
 ### MVP
 
@@ -187,18 +216,19 @@ Operational habits that pay off:
 ### Enterprise
 
 - [ ] Multiple model pools or clusters exist for fault domains, isolation or hardware classes.
-- [ ] Disaggregated inference is evaluated where prompt sizes and concurrency justify it.
+- [ ] Disaggregated inference and an endpoint picker (section 5) are evaluated where prefix sharing, prompt sizes and concurrency justify them.
 - [ ] Artifact promotion ties into provenance and trust controls from [P09](./09-security-safety.md).
 - [ ] GPU scheduling policy is coordinated with cluster operations from [P12](./12-foundation-infrastructure.md).
 - [ ] Engine upgrades, model swaps and rollback drills are rehearsed, not theoretical.
 
-## 9. Sources
+## 10. Sources
 
 Opened earlier in this repository's research process; re-check before adoption:
 
 - [KServe repository](https://github.com/kserve/kserve)
 - [vLLM repository](https://github.com/vllm-project/vllm)
 - [llm-d repository](https://github.com/llm-d/llm-d)
+- [Gateway API Inference Extension repository](https://github.com/kubernetes-sigs/gateway-api-inference-extension)
 - [SGLang repository](https://github.com/sgl-project/sglang)
 - [Hugging Face TGI repository](https://github.com/huggingface/text-generation-inference)
 - [NVIDIA Dynamo repository](https://github.com/ai-dynamo/dynamo)
