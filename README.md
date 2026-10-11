@@ -43,6 +43,7 @@ Supporting documents:
 
 - **Open source first.** Recommended platform components are open source. The platform may still call commercial model APIs through the gateway. Licence labels are `OSI`, `Open-core`, `Source-available`, `Open weights` and `Not OSS`.
 - **Dated facts.** Time-sensitive claims are as of the snapshot date and graded by how they were verified.
+- **Unverified pillar facts.** The pillar documents (P02–P12), the tool landscape and the references were drafted without live access to GitHub. They carry no star counts or release versions, and time-sensitive claims are marked *Unverified* until re-checked with the commands in the [methodology](./docs/00-methodology.md#5-snapshot-and-refresh).
 - **Not audited or legal advice.** This repository was drafted with AI assistance and then reviewed and fact-checked in separate passes. Verify before you adopt a tool, and check official texts before any compliance decision. Issues and corrections are welcome.
 
 ## Licence

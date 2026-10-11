@@ -1,0 +1,218 @@
+# P07. Observability and evaluation
+
+> **TL;DR** — Instrument AI traffic as a first-class production workload: traces, metrics, logs and cost signals on one side; repeatable offline and online evaluations on the other. OpenTelemetry is the foundation, Prometheus and Grafana are the default metrics path, and application evals should gate platform changes before users discover regressions.
+
+*Snapshot: 2026-10-11 · Related: [AI gateway](./02-ai-gateway.md) · [Model router](./03-model-router.md) · [Governance, risk and compliance](./09-governance-risk-compliance.md) · [Reliability and performance](./10-reliability-performance.md)*
+
+## 1. Why it matters
+
+Classic service telemetry is necessary but not sufficient for AI systems. You need to know not only **whether** a request succeeded, but also:
+
+- which model, prompt template, retrieval context and tool calls were involved
+- how much latency came from routing, retrieval, inference and tools
+- whether quality improved or regressed after a change
+- which tenant, team or feature consumed the tokens and cost
+
+This pillar matters because AI failures are often silent. A model can return HTTP 200 and still be wrong, unsafe or too expensive.
+
+Ownership boundaries:
+
+- **Fallback policies, retries and routing decisions** are owned by [P03](./03-model-router.md), but their outcomes must be observed here.
+- **Caching strategies and performance tuning** are owned by [P10](./10-reliability-performance.md), but their effect must be visible here.
+- **Guardrail policy and safety controls** are owned by [P08](./08-security.md), but their alerts and false positives should appear in telemetry here.
+
+## 2. Capability map
+
+| Capability | What it must do | Notes |
+|------------|-----------------|-------|
+| **Trace model requests** | Correlate gateway, router, application, retrieval, tool and model spans | One trace should survive asynchronous hops where possible |
+| **Collect service metrics** | Export latency, throughput, errors, saturation and queue metrics | AI-specific metrics complement normal service SLIs; they do not replace them |
+| **Record prompt and response metadata safely** | Keep enough detail to debug, while redacting secrets and sensitive data | Raw payload retention should be deliberate and limited |
+| **Track cost and usage** | Attribute requests, tokens and model spend to team, tenant, feature or budget | Gateway identifiers from [P02](./02-ai-gateway.md) make this much easier |
+| **Run offline evaluations** | Compare prompts, retrieval settings, models and tool policies before release | Golden datasets must be versioned like code |
+| **Watch online quality signals** | Monitor user feedback, citation quality, task success and drift | Use human review for high-risk paths; judge models are only helpers |
+| **Support release gates** | Fail or pause rollouts when regression thresholds are crossed | This applies to prompt, parser, routing and model changes alike |
+
+## 3. Tool comparison
+
+Licences, governance and project-status claims below are **Unverified (not re-checked in this edit)**. Re-check them with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh), especially for OpenTelemetry GenAI conventions, CNCF affiliations and any open-core or source-available boundaries.
+
+| Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
+|------------|--------------|---------------|---------|--------------|----------------|
+| **Telemetry standard and SDK shape** | **OpenTelemetry** | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF governance **Unverified (not re-checked in this edit)** | OpenLIT (`OSI` ✅ Apache-2.0), vendor SDKs | Choose **OpenTelemetry** when you want vendor-neutral traces, metrics and logs that survive tool changes |
+| **Time-series metrics store** | **Prometheus** | `OSI` ✅ (Apache-2.0) | Prometheus / CNCF governance **Unverified (not re-checked in this edit)** | OpenTelemetry Collector export path, managed metrics backends, OpenCost for cost views | Choose **Prometheus** when Kubernetes and service-level metrics are already core platform concerns |
+| **Dashboards and exploratory analysis** | **Grafana** | `OSI` ✅ (AGPL-3.0) | Grafana Labs | Langfuse UI (`Open-core` ⚠️; `ee/` status **Unverified (not re-checked in this edit)**), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Grafana** when you want one shared dashboard surface across AI and non-AI services and you accept AGPL obligations |
+| **LLM trace and prompt analytics** | **Langfuse** | `Open-core` ⚠️ (MIT core reported; verify `ee/` boundaries) | Langfuse | OpenLIT (`OSI` ✅ Apache-2.0), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Langfuse** when you want a purpose-built LLM observability UI and the open-core boundary is acceptable after verification |
+| **Open instrumentation starter for LLM apps** | **OpenLIT** | `OSI` ✅ (Apache-2.0) | OpenLIT maintainers | OpenTelemetry (`OSI` ✅ Apache-2.0), Langfuse (`Open-core` ⚠️) | Choose **OpenLIT** when you want AI-focused instrumentation helpers but still prefer an open standard underneath |
+| **Application and prompt regression testing** | **promptfoo** | `OSI` ✅ (MIT) | promptfoo maintainers | Ragas (`OSI` ✅ Apache-2.0), Langfuse eval workflows (`Open-core` ⚠️) | Choose **promptfoo** when the release question is "did this prompt, workflow or policy still satisfy our assertions?" |
+| **Model benchmark harness** | **lm-eval-harness** | `OSI` ✅ (MIT) | EleutherAI maintainers | promptfoo (`OSI` ✅ MIT), Ragas (`OSI` ✅ Apache-2.0) | Choose **lm-eval-harness** when you need benchmark-style model comparison rather than application-specific workflow grading |
+| **RAG and answer-quality metrics** | **Ragas** | `OSI` ✅ (Apache-2.0) | Ragas maintainers | promptfoo (`OSI` ✅ MIT), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Ragas** when retrieval quality, answer faithfulness and context use are the main questions |
+| **Cost allocation** | **OpenCost** | `OSI` ✅ (Apache-2.0) | OpenCost / CNCF governance **Unverified (not re-checked in this edit)** | Prometheus recording rules, Grafana dashboards, internal chargeback models | Choose **OpenCost** when you want Kubernetes cost allocation joined to model usage and tenant views |
+
+Default platform stance:
+
+1. **OpenTelemetry first.** Everything else should either consume OTel data or complement it.
+2. **Prometheus + Grafana** remain the default shared metrics path for platform teams.
+3. **Use one application-eval runner and one benchmark runner.** Do not conflate prompt regression tests with base-model benchmarks.
+4. **Make cost attribution a design input, not a finance afterthought.**
+
+## 4. Reference design
+
+A practical reference design combines production telemetry and release-time evaluation:
+
+1. **Instrumentation in the gateway, application, retrieval service, tool runners and model-serving path** emits OTel spans and metrics.
+2. **OpenTelemetry Collector** receives OTLP data, applies redaction or attribute transforms where needed, and fans out to metrics, traces and log backends.
+3. **Prometheus** scrapes service and infrastructure metrics; **Grafana** overlays service SLIs with AI-specific ones such as TTFT, token throughput and cost per request.
+4. **Specialised LLM observability UI** such as Langfuse or OpenLIT can sit beside the shared telemetry plane, not instead of it.
+5. **Evaluation pipeline** runs from CI or a controlled release workflow against versioned datasets and expected assertions.
+6. **Human review loop** samples high-risk outputs, calibrates judge-model scores and approves threshold changes.
+7. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway.md) and [P03](./03-model-router.md) with infrastructure signals and chargeback tags.
+
+Design rules:
+
+- **One request needs one stable identifier across all hops.**
+- **Logs should describe payload handling policy, not become an accidental data lake of raw prompts.**
+- **Evaluation datasets are production assets.** Version them, review them and retire stale ones deliberately.
+- **Judge-model scores are secondary evidence.** Human review remains the calibration anchor.
+
+## 5. Implementation guide
+
+### 5.1 Start with span boundaries you can explain
+
+Trace at least these steps separately:
+
+- gateway admission
+- routing decision
+- retrieval request
+- model invocation
+- tool calls
+- response assembly
+
+If operators cannot say where latency lives, the trace model is still too coarse.
+
+### 5.2 Keep the collector simple first
+
+A minimal OpenTelemetry Collector config can accept OTLP and expose metrics for Prometheus:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc: {}
+      http: {}
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:9464
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
+```
+
+Add trace or log exporters only after you have agreed retention and redaction rules.
+
+### 5.3 Decide what to label
+
+Standard labels should include:
+
+- tenant or team
+- product or feature
+- model name
+- route or policy name
+- prompt or workflow version
+- retrieval index version, where applicable
+
+Prefer the published OpenTelemetry semantic conventions, including the GenAI attributes where your SDKs support them; the exact attribute set is **Unverified (not re-checked in this edit)** and should be refreshed from [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+
+Without these labels, cost and regression analysis become anecdotal.
+
+### 5.4 Separate evaluation types
+
+Use different tracks for different questions:
+
+- **Regression tests:** did this app still do the expected task?
+- **RAG quality tests:** did retrieval improve citations and faithfulness?
+- **Benchmark-style model tests:** is model A generally stronger than model B on a known suite?
+- **Online review:** are real users seeing quality drift or safety issues?
+
+### 5.5 Gate changes, not only releases
+
+Run evaluations for prompt edits, routing policy changes, parser changes, embedding changes and model upgrades. AI regressions often come from the plumbing around the model, not the model alone.
+
+## 6. Operations
+
+Operate observability and evaluation as part of platform reliability:
+
+- **Telemetry retention:** decide what stays for days, weeks or months, and why.
+- **Redaction:** classify prompts, tool payloads and outputs before storing them.
+- **Sampling:** keep enough high-value traces for debugging without storing every raw payload forever.
+- **Threshold ownership:** assign owners for latency, cost and quality thresholds.
+- **Dataset curation:** remove stale examples and add new failure cases after incidents.
+- **Cost review:** compare cost per successful task, not only cost per request.
+- **Alerting:** alert on user-impacting symptoms such as rising empty retrievals, tool failure rates or judge-score collapse, not only CPU and memory.
+
+Operational heuristics:
+
+- If a cost spike appears, break it down by tenant, model and route before cutting global limits.
+- If latency looks fine but quality falls, compare retrieval index, prompt version and tool path before swapping models.
+- If a judge score drifts upward while user complaints rise, recalibrate the evaluation set or reviewer process.
+
+## 7. Pitfalls
+
+- **Only monitoring HTTP status and latency.** AI regressions often hide behind successful responses.
+- **Logging raw prompts by default.** This creates avoidable privacy and secret-handling risk.
+- **Using one score for all quality questions.** Faithfulness, task success and user satisfaction are different signals.
+- **Treating benchmark harnesses as application evals.** A good benchmark score does not prove your workflow works.
+- **Skipping baselines after non-model changes.** Parser, chunking, routing and tool changes can all alter user outcomes.
+- **No denominator for cost.** Spend per request is weaker than spend per successful task or per accepted answer.
+- **Letting dashboards replace runbooks.** Operators still need clear interpretations and response steps.
+
+## 8. Checklist
+
+### MVP
+
+- [ ] OpenTelemetry instrumentation added to gateway, application and model-call path
+- [ ] Prometheus scraping core service metrics and AI-specific latency metrics
+- [ ] Grafana dashboard for request rate, error rate, TTFT and total latency
+- [ ] One small regression dataset and one repeatable eval runner in CI
+- [ ] Basic usage and cost labels attached to requests
+
+### Production
+
+- [ ] Trace IDs cross retrieval, tool and async boundaries
+- [ ] Redaction policy defined before storing prompts or tool payloads
+- [ ] Quality gates cover prompt, model and routing changes
+- [ ] Online feedback or human review loop calibrated against offline scores
+- [ ] Cost dashboards joined with tenant, feature and model labels
+- [ ] Runbooks exist for latency, quality and cost regressions
+
+### Enterprise
+
+- [ ] Shared OTel collector patterns and attribute conventions standardised platform-wide
+- [ ] Application evals, benchmark suites and safety review loops kept separate but linked
+- [ ] Threshold ownership mapped to engineering, product and risk stakeholders
+- [ ] Chargeback or showback process aligned with [P09](./09-governance-risk-compliance.md)
+- [ ] Long-term telemetry retention, privacy and legal review completed
+- [ ] Post-incident process feeds new eval cases back into the regression datasets
+
+## 9. Sources
+
+Primary upstreams to re-check:
+
+- [OpenTelemetry project](https://github.com/open-telemetry)
+- [OpenTelemetry semantic conventions repository](https://github.com/open-telemetry/semantic-conventions)
+- [Prometheus repository](https://github.com/prometheus/prometheus)
+- [Grafana repository](https://github.com/grafana/grafana)
+- [Langfuse repository](https://github.com/langfuse/langfuse)
+- [Arize Phoenix repository](https://github.com/Arize-ai/phoenix)
+- [OpenLIT repository](https://github.com/openlit/openlit)
+- [promptfoo repository](https://github.com/promptfoo/promptfoo)
+- [lm-evaluation-harness repository](https://github.com/EleutherAI/lm-evaluation-harness)
+- [Ragas repository](https://github.com/explodinggradients/ragas)
+- [OpenCost repository](https://github.com/opencost/opencost)
+- [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
+
+All licence, steward and project-status metadata above is **Unverified (not re-checked in this edit)**; refresh it with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
