@@ -69,6 +69,26 @@ The application (or a gateway hook) embeds the query, queries the vector store, 
 
 The agent runtime calls models through the gateway like any other client. Tool calls go to MCP servers, ideally through a tool gateway that applies authorisation and audit; code execution runs in a sandbox ([P06](./06-agents-mcp.md), [P11](./11-hardening.md)). The agent's identity, not the user's, is what the tool sees unless delegation is explicit ([P08](./08-security.md)).
 
+### 2.4 Model change and release (control path)
+
+Not a request flow, but the path that keeps the others safe. A new model, prompt or route is registered with owner and risk metadata ([P09](./09-governance-risk-compliance.md)). Its artifact is scanned, signed and pulled from an approved store ([P11](./11-hardening.md)). It is declared in Git and applied by GitOps ([P12](./12-foundation-infrastructure.md)). An evaluation run gates the change ([P07](./07-observability-evaluation.md)). Traffic then shifts by canary weight ([P03](./03-model-router.md)) with a rollback path, while serving capacity follows the SLO ([P04](./04-model-serving.md), [P10](./10-reliability-performance.md)).
+
+### 2.5 Pillar coverage
+
+| Pillar | Appears in |
+|--------|------------|
+| P02 AI gateway | 2.1, 2.2, 2.3 (every model call) |
+| P03 Model router | 2.1, 2.4 |
+| P04 Model serving | 2.1, 2.4 |
+| P05 Data and RAG | 2.2 |
+| P06 Agents and MCP | 2.3 |
+| P07 Observability and evaluation | all flows (telemetry), 2.4 (evaluation gate) |
+| P08 Security | 2.1 (guardrails), 2.2 (untrusted retrieval), 2.3 (identity) |
+| P09 Governance, risk and compliance | 2.4 (registry, policy), section 3 |
+| P10 Reliability and performance | section 3 (caching), 2.4 (SLO) |
+| P11 Hardening | 2.3 (sandbox), 2.4 (supply chain), section 4 (air-gapped) |
+| P12 Foundation and delivery | 2.4 (GitOps), section 3 (secrets) |
+
 ## 3. Cross-cutting attachment points
 
 | Concern | Where it attaches |
@@ -78,6 +98,7 @@ The agent runtime calls models through the gateway like any other client. Tool c
 | Policy as code | Admission control in the cluster, spend and routing policy at the gateway ([P09](./09-governance-risk-compliance.md)) |
 | Caching | Gateway (exact, semantic) and engine (prefix, KV); owned by [P10](./10-reliability-performance.md) |
 | Secrets | Provider keys live only in the gateway's secret store; clients never hold them ([P12](./12-foundation-infrastructure.md)) |
+| Cost and tenancy | The gateway tags every call with tenant and application; cost allocation joins those tags to cluster cost ([P07](./07-observability-evaluation.md)); budgets and chargeback are a process owned by [P09](./09-governance-risk-compliance.md) |
 
 ## 4. Deployment topologies
 

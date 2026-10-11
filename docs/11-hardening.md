@@ -1,4 +1,4 @@
-# Hardening
+# P11. Hardening
 
 > **TL;DR** — Hardening reduces the platform's own attack surface: restricted cluster baselines, signed artifacts, scanned images, safer model formats, tighter network boundaries and stronger isolation for untrusted code and tenants. This pillar owns supply chain, tenant isolation and model-artifact safety.
 
@@ -30,24 +30,29 @@ It does **not** own prompt injection, PII redaction or guardrail policy; those b
 | Signing and provenance | Images and releases are signed and tied to build identity | Cosign/Sigstore + SLSA practices | Governance uses the evidence; P11 generates and enforces it |
 | SBOM generation | Every shipped image can produce a package inventory | Syft | AI-BOM ownership belongs to [P09](./09-governance-risk-compliance.md) |
 | Tenant isolation | High-risk or untrusted workloads run with stronger isolation than ordinary web apps | Kata Containers or gVisor | Business-level tenancy policy belongs elsewhere |
-| Model-artifact safety | Unsafe formats and suspicious files are quarantined before serving | safetensors-first policy + ModelScan | Model approval state belongs to [P09](./09-governance-risk-compliance.md) |
+| Admission-time verification | Only signed, digest-pinned images from approved registries are admitted | Kyverno `verifyImages` | Policy vocabulary and exceptions belong to [P09](./09-governance-risk-compliance.md) |
+| Model-artifact safety | Unsafe formats and suspicious files are quarantined before serving | safetensors-first policy + ModelScan; OpenSSF model-signing (OMS) for provenance | Model approval state belongs to [P09](./09-governance-risk-compliance.md) |
 | GPU lifecycle control | Drivers and device plugins are installed and upgraded consistently | NVIDIA GPU Operator | Capacity planning belongs to [P04](./04-model-serving.md) |
 
 ## 3. Tool comparison table
 
 | Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when… |
 |------------|--------------|---------------|---------|------------------|--------------------------|
-| Network policy and datapath | **Cilium** | OSI (`Apache-2.0`) | Cilium project | native `NetworkPolicy`, Calico (verify the LICENSE file) | you want policy, observability and eBPF-based enforcement from one networking layer |
-| Runtime threat detection | **Falco** | OSI (`Apache-2.0`) | Falco project | auditd rules, Cilium Tetragon (verify the LICENSE file) | you need syscall-level detections with Kubernetes context |
-| Vulnerability and misconfiguration scanning | **Trivy** | OSI (`Apache-2.0`) | Trivy maintainers | Grype (`Apache-2.0`), distro-native scanners | you want one scanner for images, filesystems, IaC and cluster config |
-| Signing and provenance | **Cosign + Sigstore** | OSI (`Apache-2.0`) | Sigstore project | offline GPG workflows, Notation (verify the LICENSE file) | you want identity-tied signatures and transparent verification flows |
+| Network policy and datapath | **Cilium** | OSI (`Apache-2.0`) | Cilium project | native `NetworkPolicy`, Calico (`Apache-2.0`; **Unverified**) | you want policy, observability and eBPF-based enforcement from one networking layer |
+| Runtime threat detection | **Falco** | OSI (`Apache-2.0`) | Falco project (CNCF graduated) | auditd rules, Cilium Tetragon (`Apache-2.0`; **Unverified**, enforcement-capable eBPF) | you need syscall-level detections with Kubernetes context |
+| Vulnerability and misconfiguration scanning | **Trivy** | OSI (`Apache-2.0`) | Trivy maintainers (Aqua Security) | Grype (`Apache-2.0`), distro-native scanners, kube-bench for CIS checks (`Apache-2.0`; **Unverified**) | you want one scanner for images, filesystems, IaC and cluster config; pin to a verified release and digest after the March 2026 incident (note below) |
+| Signing and provenance | **Cosign + Sigstore** | OSI (`Apache-2.0`) | Sigstore project | offline GPG workflows, Notation (`Apache-2.0`; **Unverified**) | you want identity-tied signatures and transparent verification flows |
 | SBOM generation | **Syft** | OSI (`Apache-2.0`) | Anchore | Trivy SBOM mode, build-system native SBOMs | you need repeatable package inventories for policy and incident response |
+| Signed-artifact admission | **Kyverno** `verifyImages` | OSI (`Apache-2.0`) | Kyverno project | Sigstore policy-controller (**Unverified**), Ratify | you already run Kyverno for [P09](./09-governance-risk-compliance.md) and want one admission engine |
+| Model-artifact provenance | **OpenSSF model-signing (OMS)** | OSI (`Apache-2.0`; **Unverified**) | OpenSSF | Sigstore blob signing with cosign, checksum manifests | you sign and verify model weights with the same Sigstore trust chain as images |
 | Stronger workload isolation | **Kata Containers** | OSI (`Apache-2.0`) | Kata Containers community | gVisor (`Apache-2.0`) | risky tools or multi-tenant agent runtimes justify VM-like boundaries |
 | Model-artifact scanning | **ModelScan** | verify the LICENSE file | ModelScan maintainers | safetensors-only policy, offline malware scanning | you ingest third-party models or notebooks and need artifact-specific findings |
 | GPU stack lifecycle | **NVIDIA GPU Operator** | verify the LICENSE file | NVIDIA | hand-built driver and plugin DaemonSets | you want a repeatable GPU software stack, but will re-check the licence before standardising |
 
 Notes:
 
+- Trivy: on 19 March 2026 its release pipeline, `trivy-action` and `setup-trivy` were compromised and malicious binaries/images were published (affected versions include v0.69.4; advisory GHSA-69fq-xp46-6x23). Licence is unchanged (`Apache-2.0`) and Aqua reports remediation, but pin scanner binaries, images and actions by digest or commit SHA, verify signatures, and rotate any CI secrets exposed to affected versions. Search-cited; confirm in the advisory.
+- Evidence grades: SLSA (build provenance levels) and CIS benchmarks are guidance frameworks, not tools; Kata, gVisor and Cosign details were not re-opened in this edit. gVisor suits syscall-level sandboxing without nested virtualisation; Kata suits VM-grade isolation where hardware virtualisation exists.
 - `safetensors` is usually the safer default for model exchange because it avoids arbitrary code execution patterns associated with Python pickle loading.
 - NVIDIA packaging terms and ModelScan project details are **Unverified (not re-checked in this edit)**; verify before adoption with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
@@ -162,5 +167,9 @@ Upstream projects and references for this pillar:
 - [gVisor](https://gvisor.dev/)
 - [safetensors](https://github.com/huggingface/safetensors)
 - [ModelScan](https://github.com/protectai/modelscan)
+- [OpenSSF model-signing](https://github.com/sigstore/model-transparency)
+- [Tetragon](https://github.com/cilium/tetragon)
+- [Grype](https://github.com/anchore/grype)
+- [Kyverno image verification](https://kyverno.io/docs/policy-types/cluster-policy/verify-images/)
 - [NVIDIA GPU Operator](https://github.com/NVIDIA/gpu-operator)
 - [Methodology](./00-methodology.md) for evidence grades and refresh commands

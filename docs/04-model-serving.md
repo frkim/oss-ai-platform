@@ -1,4 +1,4 @@
-# Model serving
+# P04. Model serving
 
 > **TL;DR** — Model serving is the runtime layer that turns model artifacts and scarce accelerators into stable, observable inference endpoints. The best default for a Kubernetes-first platform is a serving control plane such as KServe paired with a proven engine such as vLLM, while keeping routing, caching and artifact hardening in their owning pillars.
 
@@ -36,16 +36,19 @@ This pillar does **not** own:
 
 ## 3. Tool comparison
 
-Licence labels and steward names below are snapshot facts and therefore **Unverified (not re-checked in this edit; re-verify with the commands in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**.
+Licence labels, stars (rounded), archived flags and CNCF levels were read on 2026-10-11 from GitHub and the CNCF landscape file (**Opened**). Stars: vLLM ~93.5k, SGLang ~37.0k, TGI ~10.9k, Dynamo ~8.3k, TensorRT-LLM ~14.8k, LMDeploy ~8.1k, llama.cpp ~130.8k, Ollama ~182.7k, KServe ~6.1k, llm-d ~4.8k, KAITO ~1.0k, Ray ~44.0k. "Choose when" guidance is editorial; no benchmarks are claimed. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
 | Capability | Licence label | Steward | Default pick | Alternatives | Choose X when… |
 |------------|---------------|---------|--------------|--------------|----------------|
-| Kubernetes serving control plane | OSI ✅ Apache-2.0 | KServe community | **KServe** | llm-d; plain Kubernetes Deployments | Choose KServe when you want a general, Kubernetes-native serving layer that can standardise rollout, autoscaling and endpoint lifecycle across more than one engine. KServe's CNCF maturity level is time-sensitive — **Unverified (not re-checked in this edit; re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))**. |
-| High-throughput LLM engine | OSI ✅ Apache-2.0 | vLLM project | **vLLM** | SGLang; Hugging Face TGI; NVIDIA Dynamo | Choose vLLM when throughput, batching and broad ecosystem support matter more than specialised runtime semantics. It is the most balanced default for shared GPU clusters. |
-| Inference-aware cluster path | OSI ✅ Apache-2.0 | llm-d community | llm-d | KServe; Gateway API Inference Extension | Choose llm-d when disaggregated inference, scheduler-aware routing signals and tighter coordination between serving and routing are primary design goals rather than later optimisations. |
-| Edge and local packaging | OSI ✅ MIT | Ollama | Ollama | llama.cpp | Choose Ollama when developers need a simple local or small-node packaging layer. Choose llama.cpp when you need maximal portability and direct control over GGUF-style CPU or edge inference. |
+| Kubernetes serving control plane | OSI ✅ Apache-2.0 | KServe community (CNCF incubating per the landscape file) | **KServe** | llm-d; KAITO; KubeRay / Ray Serve; plain Kubernetes Deployments | Choose KServe when you want a general, Kubernetes-native serving layer that can standardise rollout, autoscaling and endpoint lifecycle across more than one engine, including non-LLM models. Choose KAITO (Apache-2.0) when you want Azure-leaning, preset-driven GPU node provisioning plus model deployment; choose KubeRay and Ray Serve (Apache-2.0, Ray ~44k★) when the workload is already Ray-based or needs Python-level composition. |
+| High-throughput LLM engine | OSI ✅ Apache-2.0 | vLLM project | **vLLM** | SGLang; LMDeploy; Hugging Face TGI (maintenance mode); NVIDIA Dynamo | Choose vLLM when throughput, batching and broad ecosystem support matter more than specialised runtime semantics. It is the most balanced default for shared GPU clusters. Choose SGLang for prefix-heavy, structured or agentic workloads you have benchmarked, and LMDeploy (Apache-2.0) when its quantisation and TurboMind engine suit your models. Avoid TGI for new builds: its repository is archived. |
+| NVIDIA-optimised engine and datacentre orchestration | OSI ✅ Apache-2.0 (TensorRT-LLM: Apache-2.0 with some third-party-derived portions; Dynamo: Apache-2.0) | NVIDIA | Alternative | vLLM; SGLang; llm-d | Choose TensorRT-LLM when you run NVIDIA-only fleets and will invest in engine builds for the last increment of performance. Choose Dynamo for datacentre-scale disaggregated serving and KV-aware routing; it can run vLLM, SGLang or TensorRT-LLM backends (**Unverified**, confirm current backends). Both couple you to NVIDIA hardware and release cadence. |
+| Inference-aware cluster path | OSI ✅ Apache-2.0 | llm-d community | llm-d | KServe; Dynamo; Gateway API Inference Extension | Choose llm-d when disaggregated inference, scheduler-aware routing signals and tighter coordination between serving and routing are primary design goals rather than later optimisations. It is vLLM-based and builds on the Inference Extension and LeaderWorkerSet-style multi-node patterns (**Unverified**). |
+| Edge and local packaging | OSI ✅ MIT | Ollama | Ollama | llama.cpp | Choose Ollama when developers need a simple local or small-node packaging layer. Choose llama.cpp (MIT) when you need maximal portability and direct control over GGUF-style CPU or edge inference; Ollama is not a shared multi-tenant GPU server, so keep it out of production pools. |
 
-The "maintenance mode" caveat sometimes attached to Hugging Face TGI is **Unverified (not re-checked in this edit; re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh))** and should not be repeated blindly.
+Why these defaults: KServe has the broadest lifecycle and multi-engine coverage and a CNCF home; vLLM has by far the largest engine adoption and ecosystem and is actively maintained (**maintenance** and **adoption** signals). Multi-node placement and gang scheduling for large models are covered by [P12](./12-foundation-infrastructure.md) (Kueue, and LeaderWorkerSet or Volcano where needed). Security posture and operability (Helm chart, HA) were not compared per engine — **Unverified**.
+
+TGI's README states it is in maintenance mode and recommends vLLM or SGLang, and the repository is archived (**Opened**, 2026-10-11). Treat it as legacy for new deployments.
 
 ## 4. Reference design
 
@@ -53,7 +56,7 @@ A solid serving design usually has five parts.
 
 1. **Approved model storage.** Model weights, tokenizer files and adapters live in object storage or a registry-backed distribution path.
 2. **Serving control plane.** KServe or a similar layer creates and updates endpoints declaratively.
-3. **Inference engine pods.** vLLM, SGLang, TGI, Dynamo or another engine loads the model and serves traffic.
+3. **Inference engine pods.** vLLM, SGLang, LMDeploy, TensorRT-LLM, Dynamo or another engine loads the model and serves traffic (TGI only for existing deployments).
 4. **Accelerator-aware scheduling.** Nodes, GPU classes and autoscaling policies fit the memory and throughput profile of each endpoint.
 5. **Feedback to the router.** Health, queue depth and warm-capacity signals flow to [P03](./03-model-router.md).
 
@@ -199,6 +202,11 @@ Opened earlier in this repository's research process; re-check before adoption:
 - [SGLang repository](https://github.com/sgl-project/sglang)
 - [Hugging Face TGI repository](https://github.com/huggingface/text-generation-inference)
 - [NVIDIA Dynamo repository](https://github.com/ai-dynamo/dynamo)
+- [NVIDIA TensorRT-LLM repository](https://github.com/NVIDIA/TensorRT-LLM)
+- [LMDeploy repository](https://github.com/InternLM/lmdeploy)
+- [KAITO repository](https://github.com/kaito-project/kaito)
+- [Ray repository](https://github.com/ray-project/ray) and [KubeRay](https://github.com/ray-project/kuberay)
+- [CNCF landscape file](https://github.com/cncf/landscape/blob/master/landscape.yml)
 - [Ollama repository](https://github.com/ollama/ollama)
 - [llama.cpp repository](https://github.com/ggml-org/llama.cpp)
 - [Methodology](./00-methodology.md)

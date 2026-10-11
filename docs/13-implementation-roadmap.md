@@ -9,6 +9,7 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 ## Phase 0: Prerequisites
 
 - A Kubernetes cluster with GitOps and an observability stack ([P12](./12-foundation-infrastructure.md)).
+- Baseline hardening of the cluster: restricted pod security defaults and image scanning ([P11](./11-hardening.md)).
 - A named platform owner and a list of first consumers.
 - A decision on data classes: which data may go to external model APIs and which must stay self-hosted.
 
@@ -21,7 +22,7 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Deploy the AI gateway in front of one or two model providers | [P02](./02-ai-gateway.md) |
 | Issue virtual keys per team; set basic quotas | [P02](./02-ai-gateway.md) |
 | Emit OpenTelemetry traces with token usage; build a cost dashboard | [P07](./07-observability-evaluation.md) |
-| Keep provider keys in a secret store | [P12](./12-foundation-infrastructure.md) |
+| Keep provider keys in a secret store; put human sign-in behind one OIDC provider | [P12](./12-foundation-infrastructure.md), [P08](./08-security.md) |
 
 **Exit test:** every model call in the organisation can be attributed to a team and a cost, and no client holds a provider key.
 
@@ -41,7 +42,7 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Do | Pillar |
 |----|--------|
 | Enable input and output guardrails; run a first red-team pass | [P08](./08-security.md) |
-| Define SLOs; add autoscaling, timeouts and circuit breakers | [P10](./10-reliability-performance.md) |
+| Define SLOs; add exact caching, a first backup, and later autoscaling, timeouts and circuit breakers | [P10](./10-reliability-performance.md) |
 | Register models and prompts; record audit logs | [P09](./09-governance-risk-compliance.md) |
 | Add agent runtimes with a tool gateway and sandboxed execution | [P06](./06-agents-mcp.md) |
 
@@ -57,6 +58,26 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Inference-aware routing, prefix-cache-aware load balancing, disaggregated serving where measurements justify it | [P03](./03-model-router.md), [P04](./04-model-serving.md) |
 
 **Exit test:** an independent review can reproduce the control evidence from Git and logs.
+
+## Checklist coverage
+
+Each pillar's checklist has MVP, Production and Enterprise levels. This table shows the phase in which each level is meant to be reached; the phase tables above list the headline actions.
+
+| Pillar | MVP | Production | Enterprise |
+|--------|-----|------------|------------|
+| [P02 AI gateway](./02-ai-gateway.md) | Phase 1 | Phase 3 (per-team keys, budgets, versioned aliases) | Phase 4 (SSO, delegated quotas, key-rotation tests) |
+| [P03 Model router](./03-model-router.md) | Phase 2 | Phase 3 (health-aware routing, canary rollback) | Phase 4 (residency rules, regional fallback tiers) |
+| [P04 Model serving](./04-model-serving.md) | Phase 2 | Phase 3 (KServe lifecycle, autoscaling signals) | Phase 4 |
+| [P05 Data and RAG](./05-data-knowledge-rag.md) | Phase 2 | Phase 3 (incremental sync, ACL tests, retrieval metrics) | Phase 4 (dedicated vector service if justified, DR) |
+| [P06 Agents and MCP](./06-agents-mcp.md) | Phase 3 (agents arrive after guardrails and audit exist) | Phase 3 (tool gateway, sandbox) | Phase 4 (A2A, break-glass, tenant isolation tests) |
+| [P07 Observability and evaluation](./07-observability-evaluation.md) | Phase 1 (telemetry, cost labels); eval runner in Phase 2 | Phase 3 (quality gates, redaction policy) | Phase 4 (chargeback, retention review) |
+| [P08 Security](./08-security.md) | Phase 1 (one identity provider, secret store); guardrails and red-team suite in Phase 3 | Phase 3 | Phase 4 (red teaming in CI, incident drills) |
+| [P09 Governance, risk and compliance](./09-governance-risk-compliance.md) | Phase 3 (registry and metadata); cost tags from Phase 1 | Phase 3 | Phase 4 |
+| [P10 Reliability and performance](./10-reliability-performance.md) | Phase 3 (SLOs, exact cache, backups, autoscaling) | Phase 3 | Phase 4 |
+| [P11 Hardening](./11-hardening.md) | Phase 0 and 1 (restricted pod defaults, image scanning) | Phase 3 (signing, deny-by-default network policy) | Phase 4 |
+| [P12 Foundation and delivery](./12-foundation-infrastructure.md) | Phase 0 | Phase 3 | Phase 4 |
+
+Two consequences: the platform reaches pillar-level MVP for security and governance only after the gateway and serving exist, and the baseline of P11 and P12 is a prerequisite rather than a late addition.
 
 ## Sequencing rules
 

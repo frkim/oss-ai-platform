@@ -23,19 +23,25 @@
 | vLLM | [P04](./04-model-serving.md) | LLM inference engine | `OSI` ✅ Apache-2.0 | vLLM project | Default | — | — |
 | llm-d | [P04](./04-model-serving.md) | Inference-aware, disaggregated serving | `OSI` ✅ Apache-2.0 | llm-d community | Alternative | — | — |
 | Ollama | [P04](./04-model-serving.md) | Local and edge packaging | `OSI` ✅ MIT | Ollama | Alternative | — | — |
+| llama.cpp | [P04](./04-model-serving.md) | Portable CPU and edge inference (GGUF) | `OSI` ✅ MIT | ggml-org | Alternative | — | — |
+| SGLang | [P04](./04-model-serving.md) | LLM inference engine | `OSI` ✅ Apache-2.0 | SGLang project | Alternative | — | — |
+| Hugging Face TGI | [P04](./04-model-serving.md) | LLM inference engine | `OSI` ✅ Apache-2.0 | Hugging Face | Alternative (maintenance mode; repository archived) | — | — |
+| NVIDIA Dynamo | [P04](./04-model-serving.md) | Distributed inference serving | Verify (GitHub shows no SPDX identifier) | NVIDIA | Alternative | — | — |
 | pgvector | [P05](./05-data-knowledge-rag.md) | Vector search in PostgreSQL | `OSI` ✅ PostgreSQL licence | pgvector maintainers | Default | — | — |
 | Qdrant | [P05](./05-data-knowledge-rag.md) | Dedicated vector database | `OSI` ✅ Apache-2.0 | Qdrant | Default | — | — |
 | Milvus | [P05](./05-data-knowledge-rag.md) | Large-scale vector platform | `OSI` ✅ Apache-2.0 | Milvus community | Alternative | — | — |
 | Weaviate | [P05](./05-data-knowledge-rag.md) | Vector database with object model | `OSI` ✅ BSD-3-Clause | Weaviate | Alternative | — | — |
 | Docling | [P05](./05-data-knowledge-rag.md) | Document parsing | `OSI` ✅ MIT | Docling maintainers | Default | — | — |
-| Unstructured | [P05](./05-data-knowledge-rag.md) | File-type ETL | Verify | Unstructured | Alternative | — | — |
-| MCP | [P06](./06-agents-mcp.md) | Tool and resource protocol | Verify spec repository | MCP community | Default | — | — |
-| A2A | [P06](./06-agents-mcp.md) | Agent-to-agent protocol | Verify spec repository | Linux Foundation (unverified) | Default | — | — |
+| Unstructured | [P05](./05-data-knowledge-rag.md) | File-type ETL | `OSI` ✅ Apache-2.0 for the open-source library (per GitHub); hosted platform is commercial | Unstructured | Alternative | — | — |
+| MCP | [P06](./06-agents-mcp.md) | Tool and resource protocol | Verify (GitHub shows no SPDX identifier; repository now `modelcontextprotocol/modelcontextprotocol`) | MCP community | Default | — | — |
+| A2A | [P06](./06-agents-mcp.md) | Agent-to-agent protocol | `OSI` ✅ Apache-2.0 (per GitHub) | Linux Foundation (unverified) | Default | — | — |
 | LangGraph | [P06](./06-agents-mcp.md) | Application-level agent runtime | `OSI` ✅ MIT | LangChain ecosystem | Default | — | — |
 | kagent | [P06](./06-agents-mcp.md) | Kubernetes-native agent control plane | `OSI` ✅ Apache-2.0 | kagent maintainers | Alternative | — | — |
 | gVisor | [P06](./06-agents-mcp.md), [P11](./11-hardening.md) | Sandbox, low friction | `OSI` ✅ Apache-2.0 | Google | Default (P06) | — | — |
 | Kata Containers | [P06](./06-agents-mcp.md), [P11](./11-hardening.md) | VM-style isolation | `OSI` ✅ Apache-2.0 | Kata community | Default (P11) | — | — |
 | OpenTelemetry | [P07](./07-observability-evaluation.md) | Telemetry standard and SDKs | `OSI` ✅ Apache-2.0 | OpenTelemetry / CNCF | Default | — | — |
+| OpenTelemetry Collector | [P07](./07-observability-evaluation.md) | Telemetry pipeline | `OSI` ✅ Apache-2.0 | OpenTelemetry / CNCF | Default | — | — |
+| Kepler | [P07](./07-observability-evaluation.md) (optional) | Energy telemetry (see [methodology 2.4](./00-methodology.md#24-deliberate-non-pillars)) | `OSI` ✅ Apache-2.0 | Kepler / CNCF Sandbox | Optional | — | — |
 | Prometheus | [P07](./07-observability-evaluation.md) | Metrics store | `OSI` ✅ Apache-2.0 | Prometheus / CNCF | Default | — | — |
 | Grafana | [P07](./07-observability-evaluation.md) | Dashboards | `OSI` ✅ AGPL-3.0 | Grafana Labs | Default | — | — |
 | Langfuse | [P07](./07-observability-evaluation.md) | LLM traces and prompt analytics | `Open-core` ⚠️ (verify `ee/`) | Langfuse | Default | — | — |
@@ -46,7 +52,7 @@
 | Ragas | [P07](./07-observability-evaluation.md) | RAG quality metrics | `OSI` ✅ Apache-2.0 | Ragas | Default | — | — |
 | OpenCost | [P07](./07-observability-evaluation.md), [P09](./09-governance-risk-compliance.md) | Kubernetes cost allocation | `OSI` ✅ Apache-2.0 | OpenCost / CNCF | Default | — | — |
 | NeMo Guardrails | [P08](./08-security.md) | Guardrail orchestration | `OSI` ✅ Apache-2.0 | NVIDIA | Default | — | — |
-| LLM Guard | [P08](./08-security.md) | Prompt and response classifiers | `OSI` ✅ MIT | Protect AI | Default | — | — |
+| LLM Guard | [P08](./08-security.md) | Prompt and response classifiers | `OSI` ✅ MIT (**repository archived 2026**) | Protect AI | Default (see note) | — | — |
 | Presidio | [P08](./08-security.md) | PII detection and redaction | `OSI` ✅ MIT | Microsoft | Default | — | — |
 | Llama Guard, Prompt Guard | [P08](./08-security.md) | Safety classifier models | `Open weights` | Meta | Alternative | — | — |
 | Keycloak | [P08](./08-security.md) | Human identity, SSO | `OSI` ✅ Apache-2.0 | Keycloak | Default | — | — |
@@ -55,11 +61,13 @@
 | OpenBao + External Secrets Operator | [P08](./08-security.md) | Secrets management | `OSI` ✅ MPL-2.0 / Apache-2.0 | OpenBao, ESO | Default | — | — |
 | HashiCorp Vault | [P08](./08-security.md) | Secrets management (reference) | `Source-available` ⚠️ (reported BSL) | HashiCorp | Not recommended | — | — |
 | garak | [P08](./08-security.md) | LLM red teaming | `OSI` ✅ Apache-2.0 | garak maintainers | Default | — | — |
-| PyRIT | [P08](./08-security.md) | Red teaming framework | `OSI` ✅ MIT | Microsoft | Alternative | — | — |
+| PyRIT | [P08](./08-security.md) | Red teaming framework | `OSI` ✅ MIT (moved to `microsoft/PyRIT`; `Azure/PyRIT` archived) | Microsoft | Alternative | — | — |
 | Kyverno | [P09](./09-governance-risk-compliance.md) | Kubernetes policy | `OSI` ✅ Apache-2.0 | Kyverno / CNCF | Default | — | — |
 | OPA and Gatekeeper | [P09](./09-governance-risk-compliance.md) | General policy engine; admission | `OSI` ✅ Apache-2.0 | OPA maintainers | Alternative | — | — |
 | MLflow | [P09](./09-governance-risk-compliance.md) | Model registry and lineage | `OSI` ✅ Apache-2.0 | MLflow maintainers | Default | — | — |
-| CycloneDX ML-BOM | [P09](./09-governance-risk-compliance.md) | AI-BOM schema | Verify | CycloneDX community | Default | — | — |
+| CycloneDX ML-BOM | [P09](./09-governance-risk-compliance.md) | AI-BOM schema | `OSI` ✅ Apache-2.0 (specification repository, per GitHub) | CycloneDX community | Default | — | — |
+| Cluster Autoscaler | [P10](./10-reliability-performance.md) | Node autoscaling | `OSI` ✅ Apache-2.0 | Kubernetes SIG Autoscaling | Alternative | — | — |
+| GuideLLM | [P10](./10-reliability-performance.md) | LLM benchmarking | `OSI` ✅ Apache-2.0 | vLLM project | Alternative | — | — |
 | Sloth, Pyrra | [P10](./10-reliability-performance.md) | SLO tooling | `OSI` ✅ Apache-2.0 | Respective maintainers | Default / alternative | — | — |
 | LMCache | [P10](./10-reliability-performance.md) | Prefix and KV cache reuse | `OSI` ✅ Apache-2.0 | LMCache | Default | — | — |
 | GPTCache | [P10](./10-reliability-performance.md) | Semantic cache | `OSI` ✅ MIT (verify maintenance) | GPTCache maintainers | Default | — | — |
@@ -67,16 +75,22 @@
 | Karpenter | [P10](./10-reliability-performance.md) | Node autoscaling | `OSI` ✅ Apache-2.0 | Karpenter maintainers | Default | — | — |
 | Velero | [P10](./10-reliability-performance.md) | Backup and restore | `OSI` ✅ Apache-2.0 | Velero maintainers | Default | — | — |
 | k6 | [P10](./10-reliability-performance.md) | Load testing | `OSI` ✅ AGPL-3.0 | Grafana Labs | Default | — | — |
+| Calico | [P11](./11-hardening.md), [P12](./12-foundation-infrastructure.md) | Networking and network policy | `OSI` ✅ Apache-2.0 | Tigera / Calico project | Alternative | — | — |
 | Cilium | [P11](./11-hardening.md), [P12](./12-foundation-infrastructure.md) | Networking and network policy | `OSI` ✅ Apache-2.0 | Cilium / CNCF | Default | — | — |
 | Falco | [P11](./11-hardening.md) | Runtime threat detection | `OSI` ✅ Apache-2.0 | Falco / CNCF | Default | — | — |
+| Tetragon | [P11](./11-hardening.md) | eBPF runtime enforcement | `OSI` ✅ Apache-2.0 | Cilium / Isovalent | Alternative | — | — |
 | Trivy | [P11](./11-hardening.md) | Vulnerability and misconfiguration scanning | `OSI` ✅ Apache-2.0 | Trivy maintainers | Default | — | — |
 | Cosign + Sigstore | [P11](./11-hardening.md) | Signing and provenance | `OSI` ✅ Apache-2.0 | Sigstore | Default | — | — |
+| Grype | [P11](./11-hardening.md) | Vulnerability scanning | `OSI` ✅ Apache-2.0 | Anchore | Alternative | — | — |
+| Notation | [P11](./11-hardening.md) | Artifact signing | `OSI` ✅ Apache-2.0 | Notary Project / CNCF | Alternative | — | — |
+| safetensors | [P11](./11-hardening.md) | Safe model-weight format | `OSI` ✅ Apache-2.0 | Hugging Face | Default (format) | — | — |
 | Syft | [P11](./11-hardening.md) | SBOM generation | `OSI` ✅ Apache-2.0 | Anchore | Default | — | — |
-| ModelScan | [P11](./11-hardening.md) | Model-artifact scanning | Verify | ModelScan maintainers | Default | — | — |
-| NVIDIA GPU Operator | [P11](./11-hardening.md) | GPU software stack lifecycle | Verify | NVIDIA | Default | — | — |
+| ModelScan | [P11](./11-hardening.md) | Model-artifact scanning | `OSI` ✅ Apache-2.0 (per GitHub; open `LICENSE` to confirm) | ModelScan maintainers | Default | — | — |
+| NVIDIA GPU Operator | [P11](./11-hardening.md) | GPU software stack lifecycle | `OSI` ✅ Apache-2.0 for the operator; verify licences of the drivers and containers it installs | NVIDIA | Default | — | — |
 | Kubernetes | [P12](./12-foundation-infrastructure.md) | Cluster substrate | `OSI` ✅ Apache-2.0 | Kubernetes / CNCF | Default | — | — |
-| Rook/Ceph | [P12](./12-foundation-infrastructure.md) | Self-hosted storage | `OSI` (verify) | Rook, Ceph | Default | — | — |
-| MinIO | [P12](./12-foundation-infrastructure.md) | Object storage | `OSI` AGPL-3.0 (details unverified) | MinIO | Alternative | — | — |
+| Rook/Ceph | [P12](./12-foundation-infrastructure.md) | Self-hosted storage | `OSI` (verify; Rook is Apache-2.0, Ceph is LGPL) | Rook, Ceph | Default | — | — |
+| MinIO | [P12](./12-foundation-infrastructure.md) | Object storage | `OSI` ✅ AGPL-3.0 (community repository archived; README says no longer maintained, with commercial AIStor offered instead) | MinIO | Not recommended | — | — |
+| Kustomize | [P12](./12-foundation-infrastructure.md) | Manifest overlays | `OSI` ✅ Apache-2.0 | Kubernetes SIG CLI | Alternative | — | — |
 | Argo CD | [P12](./12-foundation-infrastructure.md) | GitOps delivery | `OSI` ✅ Apache-2.0 | Argo / CNCF | Default | — | — |
 | Flux | [P12](./12-foundation-infrastructure.md) | GitOps delivery | `OSI` ✅ Apache-2.0 | Flux / CNCF | Alternative | — | — |
 | OpenTofu | [P12](./12-foundation-infrastructure.md) | Infrastructure as code | `OSI` ✅ MPL-2.0 | OpenTofu | Default | — | — |
@@ -98,3 +112,16 @@ done
 ```
 
 Round stars to 0.1k, record the date, and open the `LICENSE` file for any tool you adopt.
+
+## Spot-check findings (2026-10-11)
+
+GitHub API checks of the recommended repositories found changes that the pillar documents may not yet reflect. Where this table and a pillar differ on these points, the dated finding here is newer.
+
+| Tool | Finding |
+|------|---------|
+| LLM Guard | Repository and Hugging Face models archived by Protect AI (README: no longer maintained). Treat as legacy; prefer Presidio plus NeMo Guardrails, or Llama Guard / Prompt Guard (open weights) |
+| MinIO | `minio/minio` archived, "no longer maintained"; AGPL-3.0 code remains. Prefer Rook/Ceph or a managed S3-compatible store; do not start new deployments on it |
+| Hugging Face TGI | README states maintenance mode; repository archived. The caveat is real |
+| PyRIT | `Azure/PyRIT` archived; the project continues as `microsoft/PyRIT` |
+| Renamed or moved | MCP specification (`modelcontextprotocol/modelcontextprotocol`), NeMo Guardrails (`NVIDIA-NeMo/Guardrails`), Presidio (`data-privacy-stack/presidio`), safetensors (`safetensors/safetensors`), Ragas (`vibrantlabsai/ragas`); old URLs redirect |
+| Licence badges | GitHub shows no SPDX identifier for pgvector (PostgreSQL licence), Langfuse (open-core), Arize Phoenix (Elastic-2.0), Vault (BSL), MCP and NVIDIA Dynamo; read the `LICENSE` file for each |

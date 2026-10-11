@@ -1,4 +1,4 @@
-# Foundation and delivery
+# P12. Foundation and delivery
 
 > **TL;DR** — Foundation and delivery is the substrate the rest of the platform stands on: Kubernetes, networking, storage, GitOps, certificates, packaging and infrastructure as code. Good choices here make every other pillar easier to operate and easier to replace.
 
@@ -27,7 +27,7 @@ It does **not** own guardrails or PII policy; those belong to [Security](./08-se
 | Cluster substrate | Every environment is reproducible and declarative | Kubernetes | AI-specific runtime choices still belong to [P04](./04-model-serving.md) |
 | Traffic contract | Gateways and routes use standard Kubernetes APIs where possible | Gateway API | Product routing policy belongs to [P02](./02-ai-gateway.md) and [P03](./03-model-router.md) |
 | Cluster networking | One network layer handles policy, service reachability and observability cleanly | Cilium | Hardening policy details belong to [P11](./11-hardening.md) |
-| Persistent storage | Stateful platform services have a clear object, block and backup story | Rook/Ceph by default | MinIO is valid in some designs, but its current packaging and licence details should be re-checked |
+| Persistent storage | Stateful platform services have a clear object, block and backup story | Rook/Ceph by default | MinIO's community repository is archived and no longer maintained (verified 2026-10-11), so do not choose it for new designs |
 | GitOps delivery | Desired state is promoted through Git and continuously reconciled | Argo CD or Flux | Release approval process belongs to [P09](./09-governance-risk-compliance.md) |
 | Infrastructure as code | Shared environments are created from reviewable, reusable definitions | OpenTofu | Governance of exceptions still belongs to [P09](./09-governance-risk-compliance.md) |
 | Control-plane composition | Product teams request higher-level platform resources instead of raw cloud APIs | Crossplane | Keep ownership boundaries clear to avoid shadow platform teams |
@@ -39,20 +39,25 @@ It does **not** own guardrails or PII policy; those belong to [Security](./08-se
 
 | Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when… |
 |------------|--------------|---------------|---------|------------------|--------------------------|
-| Cluster substrate | **Kubernetes** | OSI (`Apache-2.0`) | Kubernetes project | managed distributions (`Not OSS`), opinionated distro bundles | you want the broadest ecosystem and the control surface assumed by the rest of this blueprint |
-| Cluster networking | **Cilium** | OSI (`Apache-2.0`) | Cilium project | cloud CNI plugins, Calico (verify the LICENSE file) | you want network policy, service networking and observability from one stack |
-| Persistent storage | **Rook/Ceph** | OSI — verify the relevant `LICENSE` files | Rook and Ceph communities | MinIO (`AGPL-3.0`, details unverified), external cloud storage (`Not OSS`) | you need self-hosted object and block storage with a broad operational feature set |
-| GitOps delivery | **Argo CD** | OSI (`Apache-2.0`) | Argo project | Flux (`Apache-2.0`) | you want an app-centric GitOps workflow with a strong operational UI |
-| Infrastructure as code | **OpenTofu** | OSI (`MPL-2.0`) | OpenTofu project | Terraform (`Source-available`), cloud-specific templates | you want Terraform-style workflows without BUSL licensing |
-| Control-plane composition | **Crossplane** | OSI (`Apache-2.0`) | Crossplane project | raw OpenTofu modules, provider-native operators | product teams need self-service composite resources instead of direct infrastructure APIs |
+| Cluster substrate | **Kubernetes** | OSI (`Apache-2.0`) | Kubernetes project (CNCF graduated) | managed distributions (`Not OSS`), Talos Linux (`MPL-2.0`) or other opinionated distro bundles | you want the broadest ecosystem and the control surface assumed by the rest of this blueprint |
+| Cluster networking | **Cilium** | OSI (`Apache-2.0`) | Cilium project (CNCF graduated) | cloud CNI plugins, Calico (`Apache-2.0`), Istio for mesh mTLS and L7 policy (`Apache-2.0`) | you want network policy, service networking and observability from one stack; add a mesh only when you need L7 identity or traffic features |
+| Persistent storage | **Rook/Ceph** | OSI (`Apache-2.0` for Rook; Ceph is LGPL — verify the `LICENSE` files) | Rook (CNCF graduated) and Ceph communities | SeaweedFS (`Apache-2.0`) or Garage (`AGPL-3.0`, **Unverified**) for S3-only needs, external cloud storage (`Not OSS`) | you need self-hosted object and block storage with a broad operational feature set |
+| GitOps delivery | **Argo CD** | OSI (`Apache-2.0`) | Argo project (CNCF graduated) | Flux (`Apache-2.0`, CNCF graduated) | you want an app-centric GitOps workflow with a strong operational UI |
+| Infrastructure as code | **OpenTofu** | OSI (`MPL-2.0`) | OpenTofu project (CNCF sandbox) | Terraform (`Source-available`, BUSL-1.1, now IBM-owned), cloud-specific templates | you want Terraform-style workflows without BUSL licensing |
+| Control-plane composition | **Crossplane** | OSI (`Apache-2.0`) | Crossplane project (CNCF graduated) | raw OpenTofu modules, provider-native operators | product teams need self-service composite resources instead of direct infrastructure APIs |
 | Packaging | **Helm** | OSI (`Apache-2.0`) | Helm project | raw manifests, Kustomize overlays | upstream projects already ship charts and you want repeatable install values |
 | Certificates | **cert-manager** | OSI (`Apache-2.0`) | cert-manager project | self-managed PKI, service-mesh issuance | you need automated issuance and rotation for gateways, webhooks and internal services |
-| Batch queueing | **Kueue** | OSI (`Apache-2.0`) | Kubernetes SIG Scheduling | native Job priority, bespoke queue controllers | GPU-heavy batch or evaluation jobs compete with online inference and need explicit admission control |
+| Batch queueing | **Kueue** | OSI (`Apache-2.0`) | Kubernetes SIG Scheduling | Volcano (`Apache-2.0`, CNCF incubating), NVIDIA KAI Scheduler (`Apache-2.0`), native Job priority | GPU-heavy batch or evaluation jobs compete with online inference and need explicit admission control; choose Volcano or KAI when you need gang scheduling or GPU sharing beyond Kueue's quota model |
+| Node autoscaling | **Karpenter** | OSI (`Apache-2.0`) | Kubernetes SIG Autoscaling | Cluster Autoscaler | you need fast, GPU-aware node provisioning on a supported cloud provider; on bare metal use Cluster Autoscaler or fixed pools |
+| GPU enablement | **NVIDIA GPU Operator** | OSI (`Apache-2.0`) | NVIDIA | vendor device plugins for other accelerators | NVIDIA GPUs need drivers, device plugin and monitoring managed declaratively |
+| Secrets and policy plumbing | **External Secrets Operator** and **Kyverno** | OSI (`Apache-2.0`) | CNCF projects | OpenBao (`MPL-2.0`) as a Vault-compatible store; OPA Gatekeeper (`Apache-2.0`) | provider keys and certificates must be synced from a secret manager and cluster policy enforced as code (policy design stays in [P08](./08-security.md)) |
 
 Notes:
 
-- The current status of MinIO community packaging and some licence details are **Unverified (not re-checked in this edit)**; confirm with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before standardising.
+- Licence, steward, stars and archive status were checked on 2026-10-11 via GitHub (**Opened**); CNCF levels come from the landscape file. Karpenter, GPU Operator, External Secrets Operator and Kyverno are added for completeness; their steward and CNCF status are **Unverified**. The defaults for them are editorial and unbenchmarked.
+- MinIO: the repository README says it is no longer maintained and points to the commercial AIStor editions; GitHub shows `AGPL-3.0` and the repository is archived (**Opened**).
 - Flux is a strong default too. Pick one GitOps controller family per environment unless you have a clear reason to run both.
+- Why the defaults: each is OSI-licensed, at least CNCF incubating or Kubernetes-SIG-hosted where a foundation home exists (adoption and maintenance signals), and Gateway-API- or Helm-friendly (interoperability and operability). OpenTofu is chosen over Terraform on the licence signal; Rook/Ceph over MinIO on the licence and maintenance signals.
 
 ## 4. Reference design
 
@@ -125,11 +130,12 @@ Foundational runbooks should be boring and explicit: how to bootstrap a new clus
 
 These items are worth re-checking before a long-term foundation decision:
 
-- **Terraform** — moved to a `Source-available` licence family; if you want the old workflow with an OSI licence, prefer OpenTofu.
-- **HashiCorp Vault** — now generally discussed as `Source-available`; if an OSI option matters, compare OpenBao carefully.
-- **Redis** — licensing and ownership history changed; confirm exactly which edition and terms you mean.
-- **Elasticsearch** — licensing diverged from the old Apache-only line; confirm whether the chosen distribution matches your policy.
-- **MinIO** — reported as `AGPL-3.0`, but recent community-edition packaging and commercial terms are **Unverified (not re-checked in this edit)**.
+- **Terraform** — moved to BUSL-1.1 (`Source-available`; the repository now names IBM as licensor, **Opened**); if you want the old workflow with an OSI licence, prefer OpenTofu (`MPL-2.0`, CNCF sandbox).
+- **HashiCorp Vault** — BUSL-1.1 (`Source-available`, **Opened**); if an OSI option matters, compare OpenBao (`MPL-2.0`) carefully.
+- **Redis** — Redis moved from BSD to RSALv2/SSPL (7.4) and later added AGPL-3.0 as an option (8.0) — **Unverified**, search-cited; confirm exactly which edition and terms you mean, and consider Valkey (BSD-3-Clause, Linux Foundation) as an OSI alternative.
+- **Elasticsearch** — moved to SSPL/Elastic-2.0 in 2021 and added AGPL-3.0 as an option in 2024 — **Unverified**, search-cited; confirm whether the chosen distribution matches your policy, and consider OpenSearch (`Apache-2.0`).
+- **MinIO** — `AGPL-3.0`, but the community repository is archived with a README notice that it is no longer maintained and that the AIStor editions are the successors (**Opened**). Plan a migration path.
+- **Ray, Kong, LiteLLM** — see [P04](./04-model-serving.md) and [P02](./02-ai-gateway.md): Ray is `Apache-2.0`; Kong Gateway core is `Apache-2.0` with upstream OSS-binary policy **Unverified**; LiteLLM is `Open-core`.
 
 For any of the above, re-read the current `LICENSE` file and upstream announcements using the refresh process in [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
@@ -176,4 +182,9 @@ Core references and upstream projects for this pillar:
 - [Helm](https://helm.sh/)
 - [cert-manager](https://cert-manager.io/)
 - [Kueue](https://github.com/kubernetes-sigs/kueue)
+- [Volcano](https://github.com/volcano-sh/volcano), [NVIDIA KAI Scheduler](https://github.com/NVIDIA/KAI-Scheduler)
+- [Karpenter](https://github.com/kubernetes-sigs/karpenter), [NVIDIA GPU Operator](https://github.com/NVIDIA/gpu-operator)
+- [External Secrets Operator](https://github.com/external-secrets/external-secrets), [Kyverno](https://github.com/kyverno/kyverno), [OpenBao](https://github.com/openbao/openbao)
+- [Istio](https://github.com/istio/istio), [Talos Linux](https://github.com/siderolabs/talos)
+- [CNCF landscape file](https://github.com/cncf/landscape/blob/master/landscape.yml)
 - [Methodology](./00-methodology.md) for the licence legend, evidence grades and refresh commands
