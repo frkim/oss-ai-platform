@@ -2,7 +2,7 @@
 
 > **TL;DR** — Links cited across the blueprint, grouped by pillar. Evidence grades follow the [methodology](./00-methodology.md#41-evidence-grades). Only the sources listed under "Opened" in the methodology were read during the original research; repository links added with the pillar documents were only existence-checked through the GitHub API on 2026-10-11 (graded *Repo-checked*), and all other links are *unverified* until you check them.
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Tool landscape](./14-tool-landscape.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Tool landscape](./15-tool-landscape.md)*
 
 ## Grades used here
 
@@ -24,14 +24,14 @@ Standards and regulatory pages (OWASP, MITRE, NIST, ISO, the EU AI Act text) are
 - [PyPI JSON index for LiteLLM](https://pypi.org/pypi/litellm/json) and [Kepler repository](https://github.com/sustainable-computing-io/kepler), both used in the [methodology](./00-methodology.md#7-sources)
 - Cloud guidance cited by the methodology (search-cited, not opened): [AWS Well-Architected Generative AI Lens](https://docs.aws.amazon.com/wellarchitected/latest/generative-ai-lens/generative-ai-lens.html), [Azure design principles for AI workloads](https://learn.microsoft.com/en-us/azure/well-architected/ai/design-principles), [Azure gateway guide](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/azure-openai-gateway-guide) and [Azure AI Landing Zones](https://github.com/Azure/AI-Landing-Zones)
 
-## P02 AI gateway and P03 Model router (Repo-checked)
+## P02 AI gateway and P02 Model router (Repo-checked)
 
 - [Agent Router (formerly Envoy AI Gateway)](https://github.com/theagentrouter/agent-router)
 - [LiteLLM](https://github.com/BerriAI/litellm)
 - [Kong Gateway](https://github.com/Kong/kong)
 - [Gateway API Inference Extension](https://github.com/kubernetes-sigs/gateway-api-inference-extension)
 
-## P04 Model serving (Repo-checked)
+## P03 Model serving (Repo-checked)
 
 - [KServe](https://github.com/kserve/kserve) · [vLLM](https://github.com/vllm-project/vllm) · [llm-d](https://github.com/llm-d/llm-d) · [SGLang](https://github.com/sgl-project/sglang)
 - [Text Generation Inference](https://github.com/huggingface/text-generation-inference) (maintenance mode, repository archived) · [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo)
@@ -55,7 +55,7 @@ Standards and regulatory pages (OWASP, MITRE, NIST, ISO, the EU AI Act text) are
 - [Langfuse](https://github.com/langfuse/langfuse) · [Arize Phoenix](https://github.com/Arize-ai/phoenix) · [OpenLIT](https://github.com/openlit/openlit)
 - [promptfoo](https://github.com/promptfoo/promptfoo) · [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) · [Ragas](https://github.com/vibrantlabsai/ragas) · [OpenCost](https://github.com/opencost/opencost) · [Kepler](https://github.com/sustainable-computing-io/kepler) (optional energy telemetry)
 
-## P08 Security (Repo-checked for repositories; standards pages unverified)
+## P09 Security (Repo-checked for repositories; standards pages unverified)
 
 - [OWASP Top 10 for LLM applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) · [OWASP agentic security initiative](https://genai.owasp.org/initiatives/agentic-security-initiative/) (the old `owasp.org/www-project-agentic-ai-security-initiative/` URL returns 404; the new site blocks scripted access, so open it in a browser) · [MITRE ATLAS](https://atlas.mitre.org/)
 - [NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) · [LLM Guard](https://github.com/protectai/llm-guard) (archived) · [Presidio](https://github.com/data-privacy-stack/presidio)
@@ -63,19 +63,19 @@ Standards and regulatory pages (OWASP, MITRE, NIST, ISO, the EU AI Act text) are
 - [OpenBao](https://github.com/openbao/openbao) · [External Secrets Operator](https://external-secrets.io/)
 - [garak](https://github.com/NVIDIA/garak) · [PyRIT](https://github.com/microsoft/PyRIT) (`Azure/PyRIT` is archived)
 
-## P09 Governance, risk and compliance (Repo-checked for repositories; standards pages unverified)
+## P10 Governance, risk and compliance (Repo-checked for repositories; standards pages unverified)
 
 - [Open Policy Agent](https://www.openpolicyagent.org/) · [Gatekeeper](https://github.com/open-policy-agent/gatekeeper) · [Kyverno](https://kyverno.io/)
 - [MLflow](https://github.com/mlflow/mlflow) · [CycloneDX](https://cyclonedx.org/) · [SPDX](https://spdx.dev/) · [OpenCost](https://opencost.io/)
 - [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework) · [ISO/IEC 42001](https://www.iso.org/standard/81230.html) · [EU AI Act explorer](https://artificialintelligenceact.eu/)
 
-## P10 Reliability and performance (Repo-checked)
+## P11 Reliability and performance (Repo-checked)
 
 - [Sloth](https://github.com/slok/sloth) · [Pyrra](https://github.com/pyrra-dev/pyrra)
 - [LMCache](https://github.com/LMCache/LMCache) · [GPTCache](https://github.com/zilliztech/GPTCache)
 - [KEDA](https://keda.sh/) · [Karpenter](https://karpenter.sh/) · [Cluster Autoscaler](https://github.com/kubernetes/autoscaler) · [Velero](https://velero.io/) · [k6](https://k6.io/) · [GuideLLM](https://github.com/vllm-project/guidellm)
 
-## P11 Hardening (Repo-checked for repositories; standards pages unverified)
+## P09 Hardening (Repo-checked for repositories; standards pages unverified)
 
 - [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) · [CIS Kubernetes benchmark](https://www.cisecurity.org/benchmark/kubernetes)
 - [Cilium](https://github.com/cilium/cilium) · [Falco](https://falco.org/) · [Trivy](https://github.com/aquasecurity/trivy)

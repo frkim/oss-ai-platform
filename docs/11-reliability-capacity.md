@@ -1,8 +1,8 @@
-# P10. Reliability and performance
+# P11. Reliability and performance
 
-> **TL;DR** — Reliability for AI systems means more than uptime. It is the combination of clear SLOs, low tail latency, sensible caching, autoscaling for bursty GPU workloads, tested recovery and repeatable benchmarks. This pillar owns caching; routing fallbacks stay with [Model router](./03-model-router.md).
+> **TL;DR** — Reliability for AI systems means more than uptime. It is the combination of clear SLOs, low tail latency, sensible caching, autoscaling for bursty GPU workloads, tested recovery and repeatable benchmarks. This pillar owns caching; routing fallbacks stay with [Model router](./02-ai-gateway-routing.md).
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Model router](./03-model-router.md) · [Model serving](./04-model-serving.md) · [Observability and evaluation](./07-observability-evaluation.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Model router](./02-ai-gateway-routing.md) · [Model serving](./03-model-serving.md) · [Observability and evaluation](./07-observability-evaluation.md)*
 
 ## 1. Why it matters
 
@@ -17,7 +17,7 @@ This pillar owns:
 - recovery, backup and restore drills;
 - load testing and benchmarks.
 
-It does **not** own routing policy such as retries, hedging, fallbacks or canaries; those belong to [Model router](./03-model-router.md). It also does not own gateway quotas; those belong to [AI gateway](./02-ai-gateway.md).
+It does **not** own routing policy such as retries, hedging, fallbacks or canaries; those belong to [Model router](./02-ai-gateway-routing.md). It also does not own gateway quotas; those belong to [AI gateway](./02-ai-gateway-routing.md).
 
 ## 2. Capability map
 
@@ -26,12 +26,12 @@ It does **not** own routing policy such as retries, hedging, fallbacks or canari
 | SLOs and error budgets | User-facing objectives exist for availability, TTFT and tail latency | Sloth or Pyrra | Telemetry collection belongs to [P07](./07-observability-evaluation.md) |
 | Exact caching | Identical requests can reuse a cached answer with a clear TTL and invalidation policy | Gateway or application cache | Storage engine choice belongs to [P12](./12-foundation-infrastructure.md) |
 | Semantic caching | Near-duplicate prompts can reuse an answer when staleness is acceptable | GPTCache | Use only where wrong-but-similar answers are low risk |
-| Prefix and KV reuse | Shared prompt prefixes and long contexts do not recompute everything for every request | LMCache or engine-native prefix caching | Engine internals still belong to [P04](./04-model-serving.md) |
-| Pod autoscaling | Worker replicas follow real load signals, not only CPU | KEDA | Queueing and scheduling still depend on [P04](./04-model-serving.md) and [P12](./12-foundation-infrastructure.md) |
+| Prefix and KV reuse | Shared prompt prefixes and long contexts do not recompute everything for every request | LMCache or engine-native prefix caching | Engine internals still belong to [P03](./03-model-serving.md) |
+| Pod autoscaling | Worker replicas follow real load signals, not only CPU | KEDA | Queueing and scheduling still depend on [P03](./03-model-serving.md) and [P12](./12-foundation-infrastructure.md) |
 | Node autoscaling | GPU and CPU node groups scale quickly enough for model mix and startup time | Karpenter or Cluster Autoscaler | Capacity planning remains an operational process |
 | Backup and restore | Metadata stores, cluster objects and persistent volumes can be restored together | Velero | Object storage platform choice belongs to [P12](./12-foundation-infrastructure.md) |
 | Benchmarking | Teams can compare prompt shapes, concurrency and model mixes before rollout | GuideLLM or k6 plus engine-specific benchmarks | Eval quality metrics still belong to [P07](./07-observability-evaluation.md) |
-| Failure injection | Autoscaling, restore and degradation paths are exercised on purpose, not discovered in incidents | Chaos Mesh or Litmus | Run in staging first; routing fallbacks stay with [P03](./03-model-router.md) |
+| Failure injection | Autoscaling, restore and degradation paths are exercised on purpose, not discovered in incidents | Chaos Mesh or Litmus | Run in staging first; routing fallbacks stay with [P02](./02-ai-gateway-routing.md) |
 
 ## 3. Tool comparison table
 
@@ -42,7 +42,7 @@ Licences, stars and archived flags were read from upstream repositories on 2026-
 | SLO specification | **Sloth** | OSI (`Apache-2.0`; 2.6k★) | Sloth maintainers | Pyrra (`Apache-2.0`), hand-written Prometheus rules | you want SLO declarations rendered into alerts and recording rules from a small spec |
 | SLO dashboard and alert workflow | **Pyrra** | OSI (`Apache-2.0`; 1.6k★) | Pyrra maintainers | Sloth (`Apache-2.0`), custom dashboards | you want a lightweight SLO UI and multi-window burn-rate workflows |
 | Prefix and KV cache reuse | **LMCache** | OSI (`Apache-2.0`; 12.0k★) | LMCache maintainers | engine-native prefix cache, shared memory KV layers | long prompts or shared system prefixes dominate TTFT and cost |
-| Semantic cache | **GPTCache** | OSI (`MIT`; 8.2k★) | GPTCache maintainers (Zilliz) | exact cache, provider-side cache features, gateway-native semantic caching | similar questions repeat often and the answer can tolerate bounded staleness; its last tagged release is August 2024, so confirm it fits your stack or prefer a gateway-native cache from [P02](./02-ai-gateway.md) |
+| Semantic cache | **GPTCache** | OSI (`MIT`; 8.2k★) | GPTCache maintainers (Zilliz) | exact cache, provider-side cache features, gateway-native semantic caching | similar questions repeat often and the answer can tolerate bounded staleness; its last tagged release is August 2024, so confirm it fits your stack or prefer a gateway-native cache from [P02](./02-ai-gateway-routing.md) |
 | Event-driven autoscaling | **KEDA** | OSI (`Apache-2.0`; 10.6k★) | KEDA project; CNCF Graduated | HPA with custom metrics, queue-native scalers | scale triggers come from queues, Prometheus or custom external metrics |
 | Node autoscaling | **Karpenter** | OSI (`Apache-2.0`; 2.2k★) | Kubernetes SIGs (`kubernetes-sigs/karpenter`) | Cluster Autoscaler (`Apache-2.0`) | you need rapid provisioning and heterogeneous node shapes for mixed inference workloads; provider support varies, so check your cloud's provider |
 | Backup and restore | **Velero** | OSI (`Apache-2.0`; 10.3k★) | Velero maintainers; CNCF Sandbox (repository now `velero-io/velero`) | storage snapshots, GitOps rebootstrap | cluster objects and persistent volumes must be restored in a coordinated way |

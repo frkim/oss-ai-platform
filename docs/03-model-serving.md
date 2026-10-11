@@ -1,8 +1,8 @@
-# P04. Model serving
+# P03. Model serving
 
 > **TL;DR** — Model serving is the runtime layer that turns model artifacts and scarce accelerators into stable, observable inference endpoints. The best default for a Kubernetes-first platform is a serving control plane such as KServe paired with a proven engine such as vLLM, while keeping routing, caching and artifact hardening in their owning pillars.
 
-*Snapshot: 2026-10-11 · Related: [Model router](./03-model-router.md) · [Reliability and performance](./10-reliability-performance.md) · [Hardening](./11-hardening.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./14-tool-landscape.md)*
+*Snapshot: 2026-10-11 · Related: [Model router](./02-ai-gateway-routing.md) · [Reliability and performance](./11-reliability-capacity.md) · [Hardening](./09-security-safety.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./15-tool-landscape.md)*
 
 ## 1. Why it matters
 
@@ -18,21 +18,21 @@ This pillar owns the parts that actually run inference:
 
 This pillar does **not** own:
 
-- **route selection, retries and fallbacks** → [P03 Model router](./03-model-router.md);
-- **caching and hedging** → [P10 Reliability and performance](./10-reliability-performance.md);
-- **artifact signing, tenant isolation and SBOM policy** → [P11 Hardening](./11-hardening.md).
+- **route selection, retries and fallbacks** → [P02 Model router](./02-ai-gateway-routing.md);
+- **caching and hedging** → [P11 Reliability and performance](./11-reliability-capacity.md);
+- **artifact signing, tenant isolation and SBOM policy** → [P09 Hardening](./09-security-safety.md).
 
 ## 2. Capability map
 
 | Capability | What good looks like | Owner boundary |
 |------------|----------------------|----------------|
-| Runtime control plane | A controller can create, scale, update and retire inference endpoints declaratively | P04 owns serving control planes |
-| Inference engine | The engine exposes an OpenAI-compatible or similar endpoint, batches work and uses accelerator memory efficiently | P04 owns engine choice |
-| Artifact handling | Models and adapters are fetched from approved storage and mounted predictably | P04 owns delivery mechanics; [P11](./11-hardening.md) owns trust policy |
-| Accelerator placement | GPU requests, node selection and scheduling choices fit the workload shape | P04 owns the serving-side requirements; [P12](./12-foundation-infrastructure.md) owns base cluster enablement |
-| Autoscaling | Scale decisions use useful signals such as concurrency, queue depth or custom metrics | P04 owns endpoint scaling inputs |
-| Rollouts | New weights, engines or serving configs can be promoted and rolled back safely | P04 owns endpoint rollout mechanics |
-| Disaggregated inference | Prefill and decode can be split when that architecture is justified | P04 owns the serving architecture; P03 consumes the exposed routing signals |
+| Runtime control plane | A controller can create, scale, update and retire inference endpoints declaratively | P03 owns serving control planes |
+| Inference engine | The engine exposes an OpenAI-compatible or similar endpoint, batches work and uses accelerator memory efficiently | P03 owns engine choice |
+| Artifact handling | Models and adapters are fetched from approved storage and mounted predictably | P03 owns delivery mechanics; [P09](./09-security-safety.md) owns trust policy |
+| Accelerator placement | GPU requests, node selection and scheduling choices fit the workload shape | P03 owns the serving-side requirements; [P12](./12-foundation-infrastructure.md) owns base cluster enablement |
+| Autoscaling | Scale decisions use useful signals such as concurrency, queue depth or custom metrics | P03 owns endpoint scaling inputs |
+| Rollouts | New weights, engines or serving configs can be promoted and rolled back safely | P03 owns endpoint rollout mechanics |
+| Disaggregated inference | Prefill and decode can be split when that architecture is justified | P03 owns the serving architecture; P02 consumes the exposed routing signals |
 
 ## 3. Tool comparison
 
@@ -58,20 +58,20 @@ A solid serving design usually has five parts.
 2. **Serving control plane.** KServe or a similar layer creates and updates endpoints declaratively.
 3. **Inference engine pods.** vLLM, SGLang, LMDeploy, TensorRT-LLM, Dynamo or another engine loads the model and serves traffic (TGI only for existing deployments).
 4. **Accelerator-aware scheduling.** Nodes, GPU classes and autoscaling policies fit the memory and throughput profile of each endpoint.
-5. **Feedback to the router.** Health, queue depth and warm-capacity signals flow to [P03](./03-model-router.md).
+5. **Feedback to the router.** Health, queue depth and warm-capacity signals flow to [P02](./02-ai-gateway-routing.md).
 
 A common progression is:
 
 - **MVP:** one engine on dedicated GPU nodes, exposed through one stable Service;
 - **Production:** a serving controller plus horizontal scale, warm replicas and explicit rollout policy;
-- **Enterprise:** multiple pools, mixed engines, disaggregated inference where justified, and route-aware telemetry back to P03.
+- **Enterprise:** multiple pools, mixed engines, disaggregated inference where justified, and route-aware telemetry back to P02.
 
 Keep these boundaries clear:
 
 - model artifact approval is not the same as model runtime deployment;
-- routing signals may come from serving, but routing policy still belongs in [P03](./03-model-router.md);
-- KV-cache and semantic caching are performance concerns in [P10](./10-reliability-performance.md), even though engines expose some of the mechanics;
-- isolation and provenance controls belong in [P11](./11-hardening.md).
+- routing signals may come from serving, but routing policy still belongs in [P02](./02-ai-gateway-routing.md);
+- KV-cache and semantic caching are performance concerns in [P11](./11-reliability-capacity.md), even though engines expose some of the mechanics;
+- isolation and provenance controls belong in [P09](./09-security-safety.md).
 
 ## 5. Implementation guide
 
@@ -163,7 +163,7 @@ Operational habits that pay off:
 - **Autoscaling on the wrong signal.** CPU often says little about a saturated GPU-backed model server.
 - **Treating all GPUs as interchangeable.** Memory size, interconnect and node topology affect what can be served efficiently.
 - **Skipping artifact hygiene.** Pulling arbitrary model files may solve a demo and break your hardening story.
-- **Expecting the router to compensate for cold or unstable runtimes.** [P03](./03-model-router.md) can shift traffic; it cannot fix a bad engine rollout.
+- **Expecting the router to compensate for cold or unstable runtimes.** [P02](./02-ai-gateway-routing.md) can shift traffic; it cannot fix a bad engine rollout.
 - **Letting every team pick its own runtime flags.** Shared platforms need a supported profile, not infinite per-team tuning freedom.
 
 ## 8. Checklist
@@ -182,13 +182,13 @@ Operational habits that pay off:
 - [ ] Runtime images, flags and artifact paths are versioned.
 - [ ] Autoscaling uses endpoint-relevant signals.
 - [ ] Warm-capacity policy exists for latency-sensitive endpoints.
-- [ ] Serving telemetry feeds routing decisions in [P03](./03-model-router.md) and dashboards in [P07](./07-observability-evaluation.md).
+- [ ] Serving telemetry feeds routing decisions in [P02](./02-ai-gateway-routing.md) and dashboards in [P07](./07-observability-evaluation.md).
 
 ### Enterprise
 
 - [ ] Multiple model pools or clusters exist for fault domains, isolation or hardware classes.
 - [ ] Disaggregated inference is evaluated where prompt sizes and concurrency justify it.
-- [ ] Artifact promotion ties into provenance and trust controls from [P11](./11-hardening.md).
+- [ ] Artifact promotion ties into provenance and trust controls from [P09](./09-security-safety.md).
 - [ ] GPU scheduling policy is coordinated with cluster operations from [P12](./12-foundation-infrastructure.md).
 - [ ] Engine upgrades, model swaps and rollback drills are rehearsed, not theoretical.
 
@@ -210,4 +210,4 @@ Opened earlier in this repository's research process; re-check before adoption:
 - [Ollama repository](https://github.com/ollama/ollama)
 - [llama.cpp repository](https://github.com/ggml-org/llama.cpp)
 - [Methodology](./00-methodology.md)
-- [Glossary](./15-glossary.md)
+- [Glossary](./16-glossary.md)

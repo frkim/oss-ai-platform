@@ -2,7 +2,7 @@
 
 > **TL;DR** — Instrument AI traffic as a first-class production workload: traces, metrics, logs and cost signals on one side; repeatable offline and online evaluations on the other. OpenTelemetry is the foundation, Prometheus and Grafana are the default metrics path, and application evals should gate platform changes before users discover regressions.
 
-*Snapshot: 2026-10-11 · Related: [AI gateway](./02-ai-gateway.md) · [Model router](./03-model-router.md) · [Governance, risk and compliance](./09-governance-risk-compliance.md) · [Reliability and performance](./10-reliability-performance.md)*
+*Snapshot: 2026-10-11 · Related: [AI gateway](./02-ai-gateway-routing.md) · [Model router](./02-ai-gateway-routing.md) · [Governance, risk and compliance](./10-governance-finops.md) · [Reliability and performance](./11-reliability-capacity.md)*
 
 ## 1. Why it matters
 
@@ -17,9 +17,9 @@ This pillar matters because AI failures are often silent. A model can return HTT
 
 Ownership boundaries:
 
-- **Fallback policies, retries and routing decisions** are owned by [P03](./03-model-router.md), but their outcomes must be observed here.
-- **Caching strategies and performance tuning** are owned by [P10](./10-reliability-performance.md), but their effect must be visible here.
-- **Guardrail policy and safety controls** are owned by [P08](./08-security.md), but their alerts and false positives should appear in telemetry here.
+- **Fallback policies, retries and routing decisions** are owned by [P02](./02-ai-gateway-routing.md), but their outcomes must be observed here.
+- **Caching strategies and performance tuning** are owned by [P11](./11-reliability-capacity.md), but their effect must be visible here.
+- **Guardrail policy and safety controls** are owned by [P09](./09-security-safety.md), but their alerts and false positives should appear in telemetry here.
 
 ## 2. Capability map
 
@@ -28,7 +28,7 @@ Ownership boundaries:
 | **Trace model requests** | Correlate gateway, router, application, retrieval, tool and model spans | One trace should survive asynchronous hops where possible |
 | **Collect service metrics** | Export latency, throughput, errors, saturation and queue metrics | AI-specific metrics complement normal service SLIs; they do not replace them |
 | **Record prompt and response metadata safely** | Keep enough detail to debug, while redacting secrets and sensitive data | Raw payload retention should be deliberate and limited |
-| **Track cost and usage** | Attribute requests, tokens and model spend to team, tenant, feature or budget | Gateway identifiers from [P02](./02-ai-gateway.md) make this much easier |
+| **Track cost and usage** | Attribute requests, tokens and model spend to team, tenant, feature or budget | Gateway identifiers from [P02](./02-ai-gateway-routing.md) make this much easier |
 | **Run offline evaluations** | Compare prompts, retrieval settings, models and tool policies before release | Golden datasets must be versioned like code |
 | **Watch online quality signals** | Monitor user feedback, citation quality, task success and drift | Use human review for high-risk paths; judge models are only helpers |
 | **Support release gates** | Fail or pause rollouts when regression thresholds are crossed | This applies to prompt, parser, routing and model changes alike |
@@ -72,7 +72,7 @@ A practical reference design combines production telemetry and release-time eval
 4. **Specialised LLM observability UI** such as Langfuse or Phoenix, fed by OpenLLMetry or OpenLIT instrumentation, can sit beside the shared telemetry plane, not instead of it.
 5. **Evaluation pipeline** runs from CI or a controlled release workflow against versioned datasets and expected assertions.
 6. **Human review loop** samples high-risk outputs, calibrates judge-model scores and approves threshold changes.
-7. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway.md) and [P03](./03-model-router.md) with infrastructure signals and chargeback tags.
+7. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway-routing.md) and [P02](./02-ai-gateway-routing.md) with infrastructure signals and chargeback tags.
 
 Design rules:
 
@@ -200,7 +200,7 @@ Operational heuristics:
 - [ ] Shared OTel collector patterns and attribute conventions standardised platform-wide
 - [ ] Application evals, benchmark suites and safety review loops kept separate but linked
 - [ ] Threshold ownership mapped to engineering, product and risk stakeholders
-- [ ] Chargeback or showback process aligned with [P09](./09-governance-risk-compliance.md)
+- [ ] Chargeback or showback process aligned with [P10](./10-governance-finops.md)
 - [ ] Long-term telemetry retention, privacy and legal review completed
 - [ ] Post-incident process feeds new eval cases back into the regression datasets
 

@@ -2,7 +2,7 @@
 
 > **TL;DR** — Start RAG with disciplined ingestion, stable metadata and access control, not with a large vector stack. For most teams the first safe default is PostgreSQL plus `pgvector`; move to a dedicated vector database only when scale, isolation or retrieval features justify the extra system.
 
-*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model serving](./04-model-serving.md) · [Reliability and performance](./10-reliability-performance.md)*
+*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model serving](./03-model-serving.md) · [Reliability and performance](./11-reliability-capacity.md)*
 
 ## 1. Why it matters
 
@@ -16,9 +16,9 @@ A weak retrieval layer creates confident but unsupported answers, stale citation
 
 Ownership boundaries matter here:
 
-- **Caching** belongs to [P10](./10-reliability-performance.md).
-- **Guardrails, prompt-injection defence and PII handling** belong to [P08](./08-security.md).
-- **Fallbacks across embedding models or search backends** belong to [P03](./03-model-router.md).
+- **Caching** belongs to [P11](./11-reliability-capacity.md).
+- **Guardrails, prompt-injection defence and PII handling** belong to [P09](./09-security-safety.md).
+- **Fallbacks across embedding models or search backends** belong to [P02](./02-ai-gateway-routing.md).
 
 ## 2. Capability map
 
@@ -50,7 +50,7 @@ Licences were read from each upstream `LICENSE` file, and stars, push dates and 
 
 Notes:
 
-- **Redis and Elasticsearch relicensing.** Redis 8 is tri-licensed (RSALv2, SSPLv1 or AGPL-3.0; 7.2 and earlier are BSD-3-Clause); Valkey (BSD-3-Clause, Linux Foundation) is the permissive fork. Neither is a recommended vector store here. If a cache or key-value store is needed alongside RAG, prefer Valkey and see [P10](./10-reliability-performance.md).
+- **Redis and Elasticsearch relicensing.** Redis 8 is tri-licensed (RSALv2, SSPLv1 or AGPL-3.0; 7.2 and earlier are BSD-3-Clause); Valkey (BSD-3-Clause, Linux Foundation) is the permissive fork. Neither is a recommended vector store here. If a cache or key-value store is needed alongside RAG, prefer Valkey and see [P11](./11-reliability-capacity.md).
 - Default picks are justified by the signals above: pgvector minimises systems to run; Qdrant has the strongest Apache-2.0 filtering story at moderate scale; Milvus is the choice when scale justifies a distributed system. Weaviate is not a default because of its open-core boundary.
 - Vector-store benchmark claims are not reproduced here; measure with your own corpus and filters.
 
@@ -68,7 +68,7 @@ A pragmatic reference design for this pillar is:
 2. **Ingestion worker:** pull changes incrementally, normalise content, compute a content hash and emit canonical document records.
 3. **Parsing stage:** extract text, headings, tables and page boundaries into a structured intermediate form.
 4. **Chunking stage:** create stable chunks with deterministic IDs, offsets, section paths and ACL metadata.
-5. **Embedding stage:** call the platform's chosen embedding model through the same governed path used for other models ([P02](./02-ai-gateway.md)).
+5. **Embedding stage:** call the platform's chosen embedding model through the same governed path used for other models ([P02](./02-ai-gateway-routing.md)).
 6. **Storage stage:** write chunks and metadata to PostgreSQL; store vectors either in `pgvector` or in a dedicated vector database; keep the document lineage in PostgreSQL even when vectors live elsewhere.
 7. **Retrieval service:** accept a query, apply tenant and ACL filters, run similarity search, optionally combine lexical and vector signals, and return chunks with provenance.
 8. **Application layer:** assemble prompt context, attach citations and pass the request onward to the model path.
@@ -167,7 +167,7 @@ Operate the retrieval layer like a data product:
 Operational heuristics:
 
 - When quality drops after a model change, check **embedding compatibility** before changing chunk sizes.
-- When latency rises, check **filter selectivity and index health** before introducing caching; caching strategy belongs to [P10](./10-reliability-performance.md).
+- When latency rises, check **filter selectivity and index health** before introducing caching; caching strategy belongs to [P11](./11-reliability-capacity.md).
 - When answers leak unrelated documents, assume an **ACL design bug** before blaming the model.
 
 ## 7. Pitfalls
@@ -180,7 +180,7 @@ Common failures are architectural, not mathematical:
 - **Ignoring incremental sync.** Nightly full rebuilds look simple until the corpus or embedding bill grows.
 - **Mixing tenants in one flat namespace without tested filters.** This creates the worst class of RAG failure: silent data exposure.
 - **Expecting higher `top_k` to solve poor ingestion.** More chunks usually mean more noise.
-- **Solving prompt injection only in retrieval.** Retrieval can reduce exposure, but the main controls belong to [P08](./08-security.md).
+- **Solving prompt injection only in retrieval.** Retrieval can reduce exposure, but the main controls belong to [P09](./09-security-safety.md).
 
 ## 8. Checklist
 

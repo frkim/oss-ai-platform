@@ -2,7 +2,7 @@
 
 > **TL;DR** — Standardise tool access before you standardise agent frameworks. Use MCP to expose tools and resources, add A2A only when agents really need to coordinate, and run side-effecting agents with least privilege inside a sandbox you can patch and audit.
 
-*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model router](./03-model-router.md) · [Security](./08-security.md) · [Hardening](./11-hardening.md)*
+*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model router](./02-ai-gateway-routing.md) · [Security](./09-security-safety.md) · [Hardening](./09-security-safety.md)*
 
 ## 1. Why it matters
 
@@ -22,9 +22,9 @@ In practice, most failures are not "the agent was not smart enough". They are:
 
 Ownership boundaries are important:
 
-- **Fallbacks and retry policy across models or backends** belong to [P03](./03-model-router.md).
-- **Guardrails, prompt-injection defence and content policy** belong to [P08](./08-security.md).
-- **Isolation, sandboxing hardening and supply-chain baseline** belong to [P11](./11-hardening.md), even though the runtime choices appear here.
+- **Fallbacks and retry policy across models or backends** belong to [P02](./02-ai-gateway-routing.md).
+- **Guardrails, prompt-injection defence and content policy** belong to [P09](./09-security-safety.md).
+- **Isolation, sandboxing hardening and supply-chain baseline** belong to [P09](./09-security-safety.md), even though the runtime choices appear here.
 
 ## 2. Capability map
 
@@ -51,7 +51,7 @@ Licences and stars were read from upstream repositories on 2026-10-11 (**Opened*
 | **Sandbox with low friction** | **gVisor** (19.6k★) | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **gVisor** when syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM |
 | **Sandbox with stronger VM-style isolation** | **Kata Containers** (8.9k★) | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **Kata Containers** when the side-effecting tools are high risk and the platform can afford the stronger isolation boundary |
 | **Per-agent sandbox lifecycle on Kubernetes** | **agent-sandbox** (4.2k★) | `OSI` ✅ (Apache-2.0) | Kubernetes SIGs (`kubernetes-sigs`) | Plain `RuntimeClass` pods (section 5.4), gVisor or Kata underneath | Choose **agent-sandbox** when you need many isolated, stateful, pausable sandboxes created per agent session through a Kubernetes API; it manages lifecycle and sits on top of gVisor or Kata rather than replacing them. Project maturity is **Unverified** |
-| **MCP and agent gateway layer** | **agentgateway** (5.3k★) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Choose **agentgateway** when you want an open MCP/A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one; choose a **thin internal gateway** when you only need an allow-list and audit log. LLM-traffic gateways are owned by [P02](./02-ai-gateway.md) |
+| **MCP and agent gateway layer** | **agentgateway** (5.3k★) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Choose **agentgateway** when you want an open MCP/A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one; choose a **thin internal gateway** when you only need an allow-list and audit log. LLM-traffic gateways are owned by [P02](./02-ai-gateway-routing.md) |
 
 Note: Microsoft AutoGen (61.3k★) is in maintenance mode, community-managed and pointing new users to Microsoft Agent Framework (read from its README), so it is not listed as an option. The repository `LICENSE` shows `CC-BY-4.0` for documentation; check the code licence file before reuse.
 
@@ -66,7 +66,7 @@ Default platform stance:
 
 A reference design for this pillar looks like this:
 
-1. **User or application request** enters through the governed API path in [P02](./02-ai-gateway.md).
+1. **User or application request** enters through the governed API path in [P02](./02-ai-gateway-routing.md).
 2. **Application policy layer** decides whether the request is a single model call or an agent workflow.
 3. **Agent runtime** keeps workflow state, tool budget, approval checkpoints and trace context.
 4. **MCP gateway** authenticates the agent, authorises tool access, logs calls and routes to approved MCP servers only.
@@ -167,8 +167,8 @@ Operational heuristics:
 - **Treating MCP as a security control by itself.** It is an interface standard, not an authorisation system.
 - **Using A2A for every internal call.** It adds protocol overhead where a queue or normal service call would do.
 - **Skipping human approval for side effects.** Fast automation is still risk if the target system changes state.
-- **Relying on the framework's defaults for retry or fallback behaviour.** Those policies belong in [P03](./03-model-router.md).
-- **Assuming sandboxing solves prompt injection.** The primary defences still live in [P08](./08-security.md).
+- **Relying on the framework's defaults for retry or fallback behaviour.** Those policies belong in [P02](./02-ai-gateway-routing.md).
+- **Assuming sandboxing solves prompt injection.** The primary defences still live in [P09](./09-security-safety.md).
 
 ## 8. Checklist
 
@@ -187,7 +187,7 @@ Operational heuristics:
 - [ ] Sandbox runtime selected for write-capable executors
 - [ ] Per-tool quotas, timeouts and retry policies documented
 - [ ] Tool owners, lifecycle and deprecation process defined
-- [ ] Prompt-injection and data-exfiltration controls linked from [P08](./08-security.md)
+- [ ] Prompt-injection and data-exfiltration controls linked from [P09](./09-security-safety.md)
 
 ### Enterprise
 

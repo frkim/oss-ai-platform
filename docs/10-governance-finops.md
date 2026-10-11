@@ -1,8 +1,8 @@
-# P09. Governance, risk and compliance
+# P10. Governance, risk and compliance
 
 > **TL;DR** — Governance is how the platform proves control: which model was approved, which policy allowed deployment, which data fed the response, who owns the risk and who pays the bill. This pillar is orientation only, not legal advice.
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Observability and evaluation](./07-observability-evaluation.md) · [Security](./08-security.md) · [Hardening](./11-hardening.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [Observability and evaluation](./07-observability-evaluation.md) · [Security](./09-security-safety.md) · [Hardening](./09-security-safety.md)*
 
 ## 1. Why it matters
 
@@ -23,7 +23,7 @@ This pillar owns:
 - control mapping to frameworks such as the NIST AI RMF, ISO/IEC 42001 and the EU AI Act;
 - FinOps processes for chargeback and accountability.
 
-It does **not** own gateway quotas or token limits; those belong to [AI gateway](./02-ai-gateway.md). It also does not own signing, provenance generation or SBOM scanning mechanics; those belong to [Hardening](./11-hardening.md), while this pillar owns how such evidence is recorded and used.
+It does **not** own gateway quotas or token limits; those belong to [AI gateway](./02-ai-gateway-routing.md). It also does not own signing, provenance generation or SBOM scanning mechanics; those belong to [Hardening](./09-security-safety.md), while this pillar owns how such evidence is recorded and used.
 
 ## 2. Capability map
 
@@ -31,12 +31,12 @@ It does **not** own gateway quotas or token limits; those belong to [AI gateway]
 |------------|----------------------|------------------------|----------|
 | Kubernetes policy | Required labels, approved registries and environment rules are enforced before rollout | Kyverno | Use OPA when you need one policy language across many systems |
 | Cross-system policy | The same policy intent can be evaluated in CI, admission, gateways and apps | OPA | Do not duplicate policy logic in five places |
-| Model registry and lineage | Each promoted model has owner, approval state, inputs and serving target recorded | MLflow | Registry depth belongs here; serving runtime belongs to [P04](./04-model-serving.md) |
-| AI-BOM and evidence | Software, models, prompts, datasets and controls can be assembled into a machine-readable evidence pack | CycloneDX ML-BOM | SBOM generation mechanics belong to [P11](./11-hardening.md) |
+| Model registry and lineage | Each promoted model has owner, approval state, inputs and serving target recorded | MLflow | Registry depth belongs here; serving runtime belongs to [P03](./03-model-serving.md) |
+| AI-BOM and evidence | Software, models, prompts, datasets and controls can be assembled into a machine-readable evidence pack | CycloneDX ML-BOM | SBOM generation mechanics belong to [P09](./09-security-safety.md) |
 | Alternate evidence schema | A second schema exists for organisations standardising on SPDX artefacts | SPDX 3 AI profile | Pick one primary schema first |
 | Data lineage events | Pipeline runs, datasets and jobs emit standard lineage events that link to model records | OpenLineage | Model-level lineage stays in the registry; RAG ingestion pipelines belong to [P05](./05-data-knowledge-rag.md) |
-| Vulnerability finding management | Scanner output from CI is deduplicated, triaged and tied to owners and SLAs | DefectDojo | Scanning itself belongs to [P11](./11-hardening.md) |
-| Cost accountability | Teams can see and allocate infrastructure cost, including GPU-heavy namespaces | OpenCost | Token-level quotas still belong to [P02](./02-ai-gateway.md) |
+| Vulnerability finding management | Scanner output from CI is deduplicated, triaged and tied to owners and SLAs | DefectDojo | Scanning itself belongs to [P09](./09-security-safety.md) |
+| Cost accountability | Teams can see and allocate infrastructure cost, including GPU-heavy namespaces | OpenCost | Token-level quotas still belong to [P02](./02-ai-gateway-routing.md) |
 | Control mapping | Controls map to internal policy and external frameworks with named owners and exceptions | NIST AI RMF as the organising taxonomy, OSCAL for machine-readable controls | Regulatory interpretation is legal work, not platform engineering |
 
 ## 3. Tool comparison table
@@ -124,7 +124,7 @@ EU AI Act dates (search-cited, secondary sources; verify against EUR-Lex):
 - 2 Feb 2025: prohibited practices and AI literacy apply.
 - 2 Aug 2025: general-purpose AI model obligations, governance and penalties apply.
 - The Digital Omnibus on AI (Regulation (EU) 2026/1744, published 24 Jul 2026) moved high-risk obligations from 2 Aug 2026 to **2 Dec 2027** (Annex III stand-alone systems) and **2 Aug 2028** (Annex I product-embedded systems). Article 50 transparency duties keep their original schedule, with a short grace period for marking until 2 Dec 2026 (**Unverified**).
-- Other frames: NIST AI RMF 1.0 with the Generative AI Profile (NIST AI 600-1); ISO/IEC 42001:2023 is a certifiable AI management-system standard. Map OWASP LLM Top 10 (2025) and agentic risks through [Security](./08-security.md).
+- Other frames: NIST AI RMF 1.0 with the Generative AI Profile (NIST AI 600-1); ISO/IEC 42001:2023 is a certifiable AI management-system standard. Map OWASP LLM Top 10 (2025) and agentic risks through [Security](./09-security-safety.md).
 
 ## 6. Operations
 

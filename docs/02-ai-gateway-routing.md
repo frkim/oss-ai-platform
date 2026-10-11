@@ -2,7 +2,7 @@
 
 > **TL;DR** — Put one governed, OpenAI-compatible front door in front of every model call. The gateway is where teams authenticate, receive virtual keys, hit quotas and budgets, and emit consistent usage records. It is not the deep home for routing policies, caching or guardrails; those belong in sibling pillars.
 
-*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model router](./03-model-router.md) · [Security](./08-security.md) · [Reliability and performance](./10-reliability-performance.md) · [Tool landscape](./14-tool-landscape.md)*
+*Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Model router](./02-ai-gateway-routing.md) · [Security](./09-security-safety.md) · [Reliability and performance](./11-reliability-capacity.md) · [Tool landscape](./15-tool-landscape.md)*
 
 ## 1. Why it matters
 
@@ -18,9 +18,9 @@ The AI gateway gives you one place to:
 
 This pillar owns **virtual keys, quotas and rate limits**. It only points to sibling pillars for:
 
-- **routing policies, retries and fallbacks** → [P03 Model router](./03-model-router.md);
-- **guardrails and prompt-injection controls** → [P08 Security](./08-security.md);
-- **caching and tail-latency tactics** → [P10 Reliability and performance](./10-reliability-performance.md).
+- **routing policies, retries and fallbacks** → [P02 Model router](./02-ai-gateway-routing.md);
+- **guardrails and prompt-injection controls** → [P09 Security](./09-security-safety.md);
+- **caching and tail-latency tactics** → [P11 Reliability and performance](./11-reliability-capacity.md).
 
 ## 2. Capability map
 
@@ -32,10 +32,10 @@ This pillar owns **virtual keys, quotas and rate limits**. It only points to sib
 | Usage attribution | Every request carries tenant, project and model labels into logs and cost dashboards | P02 emits the dimensions; [P07](./07-observability-evaluation.md) turns them into dashboards |
 | Upstream key isolation | Provider keys stay in a secret manager or Kubernetes secret, never in application code | P02 owns the indirection; [P12](./12-foundation-infrastructure.md) owns secret plumbing |
 | Request normalisation | Different backends are hidden behind one request and response shape | P02 owns protocol normalisation |
-| Policy hooks | The gateway can call out to authz, audit and redaction services before forwarding | P02 exposes hooks; [P08](./08-security.md) owns the actual guardrails |
-| Router hand-off | The gateway can forward route hints and tenant context to a router | P03 owns route choice itself |
+| Policy hooks | The gateway can call out to authz, audit and redaction services before forwarding | P02 exposes hooks; [P09](./09-security-safety.md) owns the actual guardrails |
+| Router hand-off | The gateway can forward route hints and tenant context to a router | P02 owns route choice itself |
 
-A useful litmus test: if the question is "who is allowed to spend how much, using which logical key?" it belongs here. If the question is "which model should serve this request, and what is the fallback ladder?" it belongs in [P03](./03-model-router.md).
+A useful litmus test: if the question is "who is allowed to spend how much, using which logical key?" it belongs here. If the question is "which model should serve this request, and what is the fallback ladder?" it belongs in [P02](./02-ai-gateway-routing.md).
 
 ## 3. Tool comparison
 
@@ -43,7 +43,7 @@ Licence labels, stars (rounded) and repository status were read from GitHub on 2
 
 | Tool | Licence label | Steward | Default pick? | Alternatives | Choose X when… |
 |------|---------------|---------|---------------|--------------|----------------|
-| **LiteLLM** (~60.9k★) | Open-core ⚠️ (MIT outside `enterprise/`; `enterprise/` needs a commercial subscription) | BerriAI | **Default** | Agent Router; Portkey Gateway; Kong Gateway core | Choose LiteLLM when the gateway itself must own virtual keys, per-tenant quotas, model aliases and cost attribution across many upstream APIs or self-hosted endpoints. Keep routing policy simple here and push richer traffic policy into [P03](./03-model-router.md). Check that the gated `enterprise/` features (for example SSO and some audit and team-budget controls — **Unverified**, confirm in the enterprise `LICENSE.md`) are not on your must-have list. |
+| **LiteLLM** (~60.9k★) | Open-core ⚠️ (MIT outside `enterprise/`; `enterprise/` needs a commercial subscription) | BerriAI | **Default** | Agent Router; Portkey Gateway; Kong Gateway core | Choose LiteLLM when the gateway itself must own virtual keys, per-tenant quotas, model aliases and cost attribution across many upstream APIs or self-hosted endpoints. Keep routing policy simple here and push richer traffic policy into [P02](./02-ai-gateway-routing.md). Check that the gated `enterprise/` features (for example SSO and some audit and team-budget controls — **Unverified**, confirm in the enterprise `LICENSE.md`) are not on your must-have list. |
 | **Agent Router** (formerly Envoy AI Gateway; ~2.2k★) | OSI ✅ Apache-2.0 | Agent Router project (`theagentrouter`; `envoyproxy/ai-gateway` redirects) | Alternative | LiteLLM; kgateway; Kong Gateway core | Choose Agent Router when you want a Kubernetes- and Gateway API-centric front door built on Envoy, especially if routing policy will become a first-class concern. The rename is **Opened** ([Methodology §4.3](./00-methodology.md#43-why-live-verification-matters-two-examples)). |
 | **kgateway** (~5.7k★) | OSI ✅ Apache-2.0 | kgateway project (formerly Gloo) | Alternative | Agent Router; agentgateway | Choose kgateway when you want a Gateway API implementation on Envoy with AI-gateway extensions (prompt guards, provider routing) and may later add the Gateway API Inference Extension. Its CNCF level is sandbox (landscape file, 2026-10-11). |
 | **agentgateway** (~5.3k★) | OSI ✅ Apache-2.0 | agentgateway project | Alternative | kgateway; Agent Router | Choose agentgateway when MCP and agent-to-agent (A2A) traffic must be governed alongside LLM calls; it is a Rust data plane that also serves LLM traffic. |
@@ -66,19 +66,19 @@ A practical reference design separates the **gateway** from the **router** even 
 3. The **AI gateway** authenticates the caller, maps the virtual key to tenant metadata, checks RPM/TPM and budget state, and normalises the request.
 4. The gateway either:
    - forwards directly to a chosen backend in MVP setups; or
-   - passes the request plus route hints to the **model router** in [P03](./03-model-router.md).
+   - passes the request plus route hints to the **model router** in [P02](./02-ai-gateway-routing.md).
 5. The selected backend is either:
    - a commercial model API;
-   - a self-hosted endpoint from [P04 Model serving](./04-model-serving.md); or
+   - a self-hosted endpoint from [P03 Model serving](./03-model-serving.md); or
    - a private provider bridge inside another network zone.
-6. Usage records flow to [P07](./07-observability-evaluation.md) and cost/governance processes in [P09](./09-governance-risk-compliance.md).
+6. Usage records flow to [P07](./07-observability-evaluation.md) and cost/governance processes in [P10](./10-governance-finops.md).
 
 Design rules that keep the boundary clean:
 
 - The gateway should know **who** is calling and **what** they are allowed to consume.
 - The router should know **where** the request should go and **what to do next** if that destination is slow or failing.
-- Guardrail systems may sit inline, but the gateway should treat them as call-outs owned by [P08](./08-security.md), not as ad hoc business logic.
-- Caches may sit before or after the gateway, but cache strategy belongs in [P10](./10-reliability-performance.md).
+- Guardrail systems may sit inline, but the gateway should treat them as call-outs owned by [P09](./09-security-safety.md), not as ad hoc business logic.
+- Caches may sit before or after the gateway, but cache strategy belongs in [P11](./11-reliability-capacity.md).
 
 ## 5. Implementation guide
 
@@ -175,7 +175,7 @@ Good operational habits:
 - **Using physical model IDs in client code.** Model swaps become application migrations.
 - **Breaking streaming with an intermediate proxy.** Buffered responses destroy user experience and hide backpressure problems.
 - **Missing per-tenant attribution.** Spend dashboards and budget controls fail if logs only know the service account, not the business owner.
-- **Assuming quota equals capacity management.** Quotas protect shared spend; they do not replace autoscaling and queue management in [P10](./10-reliability-performance.md).
+- **Assuming quota equals capacity management.** Quotas protect shared spend; they do not replace autoscaling and queue management in [P11](./11-reliability-capacity.md).
 
 ## 8. Checklist
 
@@ -193,13 +193,13 @@ Good operational habits:
 - [ ] Monthly or weekly budget ceilings exist per tenant or cost centre.
 - [ ] Gateway logs and metrics feed [P07](./07-observability-evaluation.md) dashboards.
 - [ ] Logical model aliases are versioned and change-controlled.
-- [ ] The router boundary is explicit: advanced fallback and retry policy lives in [P03](./03-model-router.md).
+- [ ] The router boundary is explicit: advanced fallback and retry policy lives in [P02](./02-ai-gateway-routing.md).
 
 ### Enterprise
 
 - [ ] Identity integrates with corporate SSO or workload identity rather than static shared keys.
 - [ ] Multiple business units can delegate quota administration safely.
-- [ ] Budget breach events page humans or trigger workflow in [P09](./09-governance-risk-compliance.md).
+- [ ] Budget breach events page humans or trigger workflow in [P10](./10-governance-finops.md).
 - [ ] Key rotation and tenant suspension are tested without platform downtime.
 - [ ] Audit records support legal, compliance and chargeback requirements.
 
@@ -218,4 +218,4 @@ Opened earlier in this repository's research process; re-check before adoption:
 - [Higress repository](https://github.com/higress-group/higress)
 - [Portkey Gateway repository](https://github.com/Portkey-AI/gateway)
 - [Methodology](./00-methodology.md)
-- [Glossary](./15-glossary.md)
+- [Glossary](./16-glossary.md)

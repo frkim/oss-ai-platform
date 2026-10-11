@@ -1,8 +1,8 @@
-# P08. Security
+# P09. Security
 
-> **TL;DR** — Security for an AI platform is not only TLS and CVEs. It is also prompt-injection defence, PII controls, safe tool use, strong identity, short-lived secrets and repeatable red teaming. This pillar owns guardrails and PII; [Hardening](./11-hardening.md) owns image signing, SBOMs, model-artifact safety and tenant isolation.
+> **TL;DR** — Security for an AI platform is not only TLS and CVEs. It is also prompt-injection defence, PII controls, safe tool use, strong identity, short-lived secrets and repeatable red teaming. This pillar owns guardrails and PII; [Hardening](./09-security-safety.md) owns image signing, SBOMs, model-artifact safety and tenant isolation.
 
-*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [AI gateway](./02-ai-gateway.md) · [Agents and MCP](./06-agents-mcp.md) · [Hardening](./11-hardening.md)*
+*Snapshot: 2026-10-11 · Related: [Methodology](./00-methodology.md) · [AI gateway](./02-ai-gateway-routing.md) · [Agents and MCP](./06-agents-mcp.md) · [Hardening](./09-security-safety.md)*
 
 ## 1. Why it matters
 
@@ -23,14 +23,14 @@ This pillar owns:
 - secret brokering for model providers and tools;
 - AI red teaming and recurring adversarial regression tests.
 
-It does **not** own quotas or rate limits; those belong to [AI gateway](./02-ai-gateway.md). It also does not own cluster isolation, image signing or model-artifact scanning; those belong to [Hardening](./11-hardening.md).
+It does **not** own quotas or rate limits; those belong to [AI gateway](./02-ai-gateway-routing.md). It also does not own cluster isolation, image signing or model-artifact scanning; those belong to [Hardening](./09-security-safety.md).
 
 ## 2. Capability map
 
 | Capability | What good looks like | Default building block | Boundary |
 |------------|----------------------|------------------------|----------|
 | Threat modelling | Every agent, tool and retrieval path is mapped to likely abuse cases and compensating controls | OWASP LLM/agentic Top 10 + MITRE ATLAS | Use them to scope tests, not to claim compliance |
-| Guardrail orchestration | Pre- and post-call checks run in a defined order, with allow/block/log-only outcomes | NeMo Guardrails | Keep reliability fallbacks in [P03](./03-model-router.md) |
+| Guardrail orchestration | Pre- and post-call checks run in a defined order, with allow/block/log-only outcomes | NeMo Guardrails | Keep reliability fallbacks in [P02](./02-ai-gateway-routing.md) |
 | Prompt-injection handling | Retrieved content is treated as untrusted, tool calls are policy checked and high-risk prompts are flagged | Guardrails + classifier hooks | Do not rely on one classifier alone |
 | PII detection and redaction | Sensitive fields are masked before prompts, traces and long-term storage | Presidio | Log minimisation is more important than clever redaction |
 | Human identity | Users authenticate with OIDC/SAML and roles map cleanly to teams and apps | Keycloak | Reuse an existing IdP if your organisation already has one |
