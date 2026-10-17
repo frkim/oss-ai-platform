@@ -35,6 +35,10 @@ Supporting documents:
 - [Tool landscape](./docs/15-tool-landscape.md): every tool in one catalog with licence label, steward, stars and latest release.
 - [Glossary](./docs/16-glossary.md) and [References](./docs/17-references.md).
 
+## Run it
+
+[`oss-package/`](./oss-package) deploys a laptop-sized slice of the platform with one command (`./deploy.sh up`): gateway, serving, vector store, observability and chat UI.
+
 ## How to read it
 
 - **Architects:** start with the [reference architecture](./docs/01-reference-architecture.md), then the [roadmap](./docs/14-implementation-roadmap.md) and the [pillar review](./docs/00-methodology.md#26-review-of-the-original-pillar-list).
