@@ -27,6 +27,8 @@ The research first defined the pillars (from the CNCF Cloud Native AI whitepaper
 
 Topics deliberately left out (pre-training, data and feature pipelines, edge fleets, multimodal, sustainability programmes) are listed in [methodology 2.4](./docs/00-methodology.md#24-deliberate-non-pillars), together with the topics the review promoted into pillars (fine-tuning, prompt management, multi-tenancy, FinOps, developer experience).
 
+- [Cockpit web app](./cockpit/README.md): a control-tower UI to monitor and control the platform components, packaged to deploy with the others.
+
 Supporting documents:
 
 - [Methodology](./docs/00-methodology.md): how the pillars and tools were chosen, the pillar review, the evidence grades, and the limits of the research.

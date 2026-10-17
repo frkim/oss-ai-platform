@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Platform Cockpit</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">◈</span><div><h1>AI Platform Cockpit</h1><p>Global control tower</p></div></div>
+  <div class="bulk">
+    <input id="token" type="password" placeholder="API token (optional)" aria-label="API token">
+    <button data-bulk="start">Start all</button>
+    <button data-bulk="restart">Restart all</button>
+    <button data-bulk="stop" class="danger">Stop all</button>
+  </div>
+</header>
+<main>
+  <section id="summary" class="cards" aria-live="polite"></section>
+  <div class="toolbar"><input id="filter" type="search" placeholder="Filter components or pillars…" aria-label="Filter"></div>
+  <section id="components" class="grid"></section>
+  <section class="panel"><h2>Activity</h2><ul id="events" class="events"></ul></section>
+</main>
+<dialog id="cfg"><form method="dialog" id="cfgForm"><h3 id="cfgTitle"></h3><div id="cfgFields"></div>
+  <menu><button value="cancel" class="ghost">Cancel</button><button id="cfgSave" value="save">Apply</button></menu></form></dialog>
+<div id="toast" role="status"></div>
+<script src="/app.js"></script>
+</body>
+</html>

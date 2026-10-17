@@ -1,0 +1,10 @@
+{
+  "name": "ai-platform-cockpit",
+  "version": "0.1.0",
+  "description": "Control tower web app to monitor and control the platform components",
+  "license": "MIT",
+  "private": true,
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test" },
+  "engines": { "node": ">=18" }
+}
