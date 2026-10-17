@@ -41,27 +41,28 @@ It does **not** own routing policy such as retries, hedging, fallbacks or canari
 
 ## 3. Tool comparison table
 
-Licences, stars and archived flags were read from upstream repositories on 2026-10-11 (**Opened**); CNCF levels come from the landscape file (**Opened**); Valkey's foundation is **Unverified**. Picks were driven by licence, maintenance health and Kubernetes-native operability. Stars are rounded to 0.1k.
+Licences, stars and archived flags were read from upstream repositories on 2026-10-11 and re-checked selectively in this review (**Opened**); CNCF levels come from the landscape file (**Opened**). Picks were driven by licence, maintenance health, operability and how directly a tool maps to measurable AI SLOs. Stars are rounded to 0.1k.
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when… |
-|------------|--------------|---------------|---------|------------------|--------------------------|
-| SLO specification | **Sloth** | OSI (`Apache-2.0`; 2.6k★) | Sloth maintainers | Pyrra (`Apache-2.0`), hand-written Prometheus rules | you want SLO declarations rendered into alerts and recording rules from a small spec |
-| SLO dashboard and alert workflow | **Pyrra** | OSI (`Apache-2.0`; 1.6k★) | Pyrra maintainers | Sloth (`Apache-2.0`), custom dashboards | you want a lightweight SLO UI and multi-window burn-rate workflows |
-| Prefix and KV cache reuse | **LMCache** | OSI (`Apache-2.0`; 12.0k★) | LMCache maintainers | engine-native prefix cache, shared memory KV layers | long prompts or shared system prefixes dominate TTFT and cost |
-| Semantic cache | **GPTCache** | OSI (`MIT`; 8.2k★) | GPTCache maintainers (Zilliz) | exact cache, provider-side cache features, gateway-native semantic caching | similar questions repeat often and the answer can tolerate bounded staleness; its last tagged release is August 2024, so confirm it fits your stack or prefer a gateway-native cache from [P02](./02-ai-gateway-routing.md) |
-| Job queueing and GPU quota | **Kueue** | OSI (`Apache-2.0`; 3.1k★) | Kubernetes SIGs (`kubernetes-sigs/kueue`; SIG Scheduling and WG Batch) | Volcano (`Apache-2.0`, see [P12](./12-foundation-infrastructure.md)), native ResourceQuota only | several teams share a GPU pool and need quotas, borrowing between queues, fair sharing and preemption for batch, fine-tuning and eval jobs; online serving still scales through KEDA or HPA |
-| Event-driven autoscaling | **KEDA** | OSI (`Apache-2.0`; 10.6k★) | KEDA project; CNCF Graduated | HPA with custom metrics, queue-native scalers | scale triggers come from queues, Prometheus or custom external metrics |
-| Node autoscaling | **Karpenter** | OSI (`Apache-2.0`; 2.2k★) | Kubernetes SIGs (`kubernetes-sigs/karpenter`) | Cluster Autoscaler (`Apache-2.0`) | you need rapid provisioning and heterogeneous node shapes for mixed inference workloads; provider support varies, so check your cloud's provider |
-| Backup and restore | **Velero** | OSI (`Apache-2.0`; 10.3k★) | Velero maintainers; CNCF Sandbox (repository now `velero-io/velero`) | storage snapshots, GitOps rebootstrap | cluster objects and persistent volumes must be restored in a coordinated way |
-| End-to-end load testing | **k6** | OSI (`AGPL-3.0`; 31.9k★) | Grafana Labs | vLLM benchmark scripts (`Apache-2.0`), GuideLLM (see next row) | you want scriptable API load, streaming checks and CI-friendly performance gates |
-| LLM-specific benchmarking | **GuideLLM** | OSI (`Apache-2.0`; 1.7k★) | vLLM project (`vllm-project`) | k6, vLLM benchmark scripts | you want to sweep concurrency and request rates against an OpenAI-compatible endpoint and report TTFT, inter-token latency and throughput without writing load scripts |
-| Failure injection and recovery drills | **Chaos Mesh** | OSI (`Apache-2.0`; 7.9k★) | CNCF Incubating | Litmus (`Apache-2.0`; 5.7k★, CNCF Incubating), manual node and pod drain drills | you want Kubernetes-native fault experiments (pod, network, node, IO) to prove autoscaling, restore and degradation behaviour; choose Litmus when you prefer its experiment catalogue and workflow model |
-| Shared exact-cache store (if the gateway needs one) | **Valkey** | OSI (`BSD-3-Clause`; 27.4k★) | Linux Foundation project | Redis 8 (RSALv2, SSPLv1 or AGPL-3.0, so not a permissive OSI default), in-process cache | a gateway or application exact cache needs a shared network store; avoid Redis 8 unless its AGPL option is acceptable |
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when… | Do not choose the default when… |
+|------------|--------------|---------------|---------|------------------|---------------|--------------------------|---------------------------------|
+| SLO specification | **Sloth** | OSI (`Apache-2.0`; 2.6k★) | Sloth maintainers | Pyrra (`Apache-2.0`), hand-written Prometheus rules | compact SLO spec with generated rules, but no full workflow UI by itself | you want SLO declarations rendered into alerts and recording rules from a small spec | the team wants a visual SLO workflow first and will not own another spec layer |
+| SLO dashboard and alert workflow | **Pyrra** | OSI (`Apache-2.0`; 1.6k★) | Pyrra maintainers | Sloth (`Apache-2.0`), custom dashboards | best lightweight burn-rate UI, but less focused on spec generation than Sloth | you want a lightweight SLO UI and multi-window burn-rate workflows | the SLO process already lives in Prometheus rules and Grafana and another UI adds no value |
+| Prefix and KV cache reuse | **LMCache** | OSI (`Apache-2.0`; 12.0k★) | LMCache maintainers | engine-native prefix cache, shared memory KV layers | biggest gain on long prompts, but another cache layer to tune and invalidate | long prompts or shared system prefixes dominate TTFT and cost | request diversity is high enough that cache hit rates stay low |
+| Semantic cache | **GPTCache** | OSI (`MIT`; 8.2k★) | GPTCache maintainers (Zilliz) | exact cache, provider-side cache features, gateway-native semantic caching | can cut repeated work fast, but stale or cross-tenant answers become a correctness and isolation risk | similar questions repeat often and the answer can tolerate bounded staleness; its last tagged release is August 2024, so confirm it fits your stack or prefer a gateway-native cache from [P02](./02-ai-gateway-routing.md) | precision, freshness or tenant isolation matter more than a semantic hit rate |
+| Job queueing and GPU quota | **Kueue** | OSI (`Apache-2.0`; 3.1k★) | Kubernetes SIGs (`kubernetes-sigs/kueue`; SIG Scheduling and WG Batch) | Volcano (`Apache-2.0`, see [P12](./12-foundation-infrastructure.md)), native `ResourceQuota` only | fair sharing and borrowing are strong, but it is quota-oriented rather than a full HPC scheduler | several teams share a GPU pool and need quotas, borrowing between queues, fair sharing and preemption for batch, fine-tuning and eval jobs; online serving still scales through KEDA or HPA | you need deep gang scheduling, topology-aware batch semantics or GPU-sharing features closer to HPC practice |
+| Event-driven autoscaling | **KEDA** | OSI (`Apache-2.0`; 10.6k★) | KEDA project; CNCF Graduated | HPA with custom metrics, queue-native scalers | easiest path to queue- and metric-driven scaling, but one more controller and scaler estate to own | scale triggers come from queues, Prometheus or custom external metrics | plain HPA on well-understood custom metrics already covers the load pattern |
+| Node autoscaling | **Karpenter** | OSI (`Apache-2.0`; 2.2k★) | Kubernetes SIGs (`kubernetes-sigs/karpenter`) | Cluster Autoscaler (`Apache-2.0`) | faster heterogeneous node provisioning, but provider support is narrower than Cluster Autoscaler | you need rapid provisioning and heterogeneous node shapes for mixed inference workloads; provider support varies, so check your cloud's provider | you run on bare metal, unsupported clouds or fixed pools where Cluster Autoscaler or static capacity is simpler |
+| Backup and restore | **Velero** | OSI (`Apache-2.0`; 10.3k★) | Velero maintainers; CNCF Sandbox (repository now `velero-io/velero`) | storage snapshots, GitOps rebootstrap | covers cluster objects plus volumes, but restore drills still require storage-specific validation | cluster objects and persistent volumes must be restored in a coordinated way | all critical state already lives in managed services with stronger provider-native restore workflows |
+| End-to-end load testing | **k6** | OSI (`AGPL-3.0`; 31.9k★) | Grafana Labs | vLLM benchmark scripts (`Apache-2.0`), GuideLLM (see next row) | richest HTTP and CI scripting, but AGPL and custom scripting are heavier than purpose-built LLM runners | you want scriptable API load, streaming checks and CI-friendly performance gates | a focused LLM endpoint benchmark with little custom scripting is the real need |
+| LLM-specific benchmarking | **GuideLLM** | OSI (`Apache-2.0`; 1.7k★) | vLLM project (`vllm-project`) | k6, vLLM benchmark scripts, LLMPerf (`Apache-2.0`, archived) | fastest route to TTFT and throughput sweeps, but narrower than general load tools | you want to sweep concurrency and request rates against an OpenAI-compatible endpoint and report TTFT, inter-token latency and throughput without writing load scripts | you need full business-flow scripting, browser/API mixes or benchmark coverage beyond LLM endpoints |
+| Failure injection and recovery drills | **Chaos Mesh** | OSI (`Apache-2.0`; 7.9k★) | CNCF Incubating | Litmus (`Apache-2.0`; 5.7k★, CNCF Incubating), manual node and pod drain drills | rich Kubernetes fault injection, but another controller with real blast-radius risk if misused | you want Kubernetes-native fault experiments (pod, network, node, IO) to prove autoscaling, restore and degradation behaviour; choose Litmus when you prefer its experiment catalogue and workflow model | a small team can prove its key failure paths with disciplined manual drills instead of running a chaos platform |
+| Shared exact-cache store (if the gateway needs one) | **Valkey** | OSI (`BSD-3-Clause`; 27.4k★) | Linux Foundation project | Redis 8 (RSALv2, SSPLv1 or AGPL-3.0, so not a permissive OSI default), in-process cache | strong shared-cache default with a clean licence story, but one more network hop and stateful service | a gateway or application exact cache needs a shared network store; avoid Redis 8 unless its AGPL option is acceptable | the cache is single-process or ephemeral and a remote store adds more latency than it saves |
 
 Notes:
 
 - GPTCache has had no tagged release since August 2024 although the repository still receives pushes; treat it as low-activity.
 - GuideLLM is young (v0.8.x) and moving quickly; pin its version in CI.
+- LLMPerf (`ray-project/llmperf`) is now **archived**; it is still useful as a historical benchmark reference, but not a default for new work.
 - AGPL is OSI-approved, but it has stronger copyleft implications than Apache-2.0 or MIT. Make sure that is acceptable in your environment.
 
 ## 4. Reference design
@@ -141,6 +142,7 @@ Useful reliability dashboards include:
 
 - Chasing average latency while ignoring p95 or p99.
 - Turning on semantic cache where answer freshness or precision matters more than speed.
+- Sharing one semantic cache across tenants or policy domains without isolation-aware keys.
 - Scaling only on CPU or memory for GPU-heavy inference.
 - Backing up data without ever testing restore.
 - Using benchmark prompts that are too small, too clean or too unlike production traffic.
@@ -167,6 +169,7 @@ Useful reliability dashboards include:
 - [ ] Track p95 or p99 latency by endpoint, tenant and model family.
 - [ ] Add prefix or KV reuse for long shared prompts and contexts.
 - [ ] Introduce semantic caching only on clearly low-risk flows with explicit TTLs.
+- [ ] Isolate semantic and exact cache keys by tenant, model alias and prompt or corpus version.
 - [ ] Run scheduled restore drills and performance regressions.
 - [ ] Benchmark representative prompt shapes before major releases.
 - [ ] GPU demand forecast refreshed monthly; quota requested ahead of launches.
@@ -197,6 +200,7 @@ Useful upstream references for this pillar:
 - [Velero](https://velero.io/)
 - [k6](https://k6.io/)
 - [GuideLLM](https://github.com/vllm-project/guidellm)
+- [LLMPerf](https://github.com/ray-project/llmperf) (archived)
 - [Chaos Mesh](https://github.com/chaos-mesh/chaos-mesh) and [Litmus](https://github.com/litmuschaos/litmus)
 - [Valkey](https://github.com/valkey-io/valkey)
 - [vLLM benchmark code](https://github.com/vllm-project/vllm)

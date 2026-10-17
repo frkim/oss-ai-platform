@@ -2,7 +2,7 @@
 
 A documentation repository on how to design and build a complete, vendor-neutral, **open-source AI platform**: AI gateway and routing, model serving, model lifecycle and adaptation, knowledge and context, agents, observability, evaluation, security, governance and FinOps, reliability and capacity, the foundation and delivery layer, and the platform experience on top.
 
-*Snapshot: 2026-10-11. Tool facts (licences, stars, releases, project status) were verified on that date and decay quickly; see the [methodology](./docs/00-methodology.md) for how, and how to refresh them.*
+*Snapshot: 2026-10-11, with a deep review and gap-filling pass on 2026-10-17 (added comparison criteria, trade-offs, missing tools, status corrections, architecture flows, roadmap risks and glossary terms). Tool facts (licences, stars, releases, project status) were verified on that date and decay quickly; see the [methodology](./docs/00-methodology.md) for how, and how to refresh them.*
 
 ## What is in here
 

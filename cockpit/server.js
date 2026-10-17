@@ -8,13 +8,15 @@ const PUBLIC = path.join(__dirname, 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
 
 function createServer({ token = process.env.COCKPIT_TOKEN || '', registry = create() } = {}) {
+  const commonHeaders = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
   const send = (res, status, body) => {
-    res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.writeHead(status, { ...commonHeaders, 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
   };
   const readBody = (req) => new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (ch) => { data += ch; if (data.length > 1e5) { reject(new Error('too large')); req.destroy(); } });
+    req.on('error', reject);
     req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
   });
   const reply = (res, r) => (r.error ? send(res, r.status, { error: r.error }) : send(res, 200, r));
@@ -52,7 +54,7 @@ function createServer({ token = process.env.COCKPIT_TOKEN || '', registry = crea
     if (!file.startsWith(PUBLIC + path.sep)) return send(res, 403, { error: 'forbidden' });
     fs.readFile(file, (err, buf) => {
       if (err) return send(res, 404, { error: 'not_found' });
-      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+      res.writeHead(200, { ...commonHeaders, 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
       res.end(buf);
     });
   });

@@ -1,6 +1,6 @@
 # P07. Observability
 
-> **TL;DR** - Instrument AI traffic as a first-class production workload: traces, metrics, logs and usage/cost signals on one OpenTelemetry-based plane. Prometheus and Grafana stay the default metrics path, an LLM-aware trace UI sits beside them, and agent runs are traced as trees of model, tool and handoff spans. Quality measurement (offline and online evals, judges, gates) lives in [P08](./08-evaluation-quality.md); this pillar supplies the telemetry that P08 consumes.
+> **TL;DR** - Instrument AI traffic as a first-class production workload: traces, metrics, logs and usage/cost signals on one OpenTelemetry-based plane. Prometheus and Grafana stay the default metrics path, one OTLP-fed LLM-aware trace UI such as Opik sits beside them, and agent runs are traced as trees of model, tool and handoff spans. Quality measurement (offline and online evals, judges, gates) lives in [P08](./08-evaluation-quality.md); this pillar supplies the telemetry that P08 consumes.
 
 *Snapshot: 2026-10-11 · Related: [AI gateway and routing](./02-ai-gateway-routing.md) · [Model serving](./03-model-serving.md) · [Agents, tools and protocols](./06-agents-mcp.md) · [Evaluation and quality](./08-evaluation-quality.md) · [Governance and FinOps](./10-governance-finops.md) · [Reliability and capacity](./11-reliability-capacity.md)*
 
@@ -33,48 +33,66 @@ Ownership boundaries:
 | **Collect service metrics** | Export latency, throughput, errors, saturation and queue metrics | AI-specific metrics (TTFT, tokens/s) complement normal service SLIs; they do not replace them |
 | **Record prompt and response metadata safely** | Keep enough detail to debug, while redacting secrets and sensitive data | Raw payload capture should be opt-in, sampled and time-limited |
 | **Logs and events** | Structured logs correlated by trace ID; GenAI events for prompts/completions where policy allows | Log payload-handling policy, not raw prompts by default |
+| **Long-retention event analytics** | Keep high-cardinality prompt, tool and feedback events queryable for forensics, optimisation and audit | Use a warehouse or log backend for this, not Prometheus labels |
 | **Track usage and cost** | Attribute requests, tokens, GPU time and spend to team, tenant, feature or budget | Gateway identifiers from [P02](./02-ai-gateway-routing.md) make this much easier |
 | **Attach quality signals to traces** | Accept eval scores, user feedback and review labels as span or trace annotations | Lets P08 scores be sliced by model, prompt version and tenant |
 | **Alerting and SLOs** | Alert on user-impacting symptoms and burn rate | Include AI symptoms: empty retrievals, tool failure rate, refusal rate, runaway loops |
 
 ## 3. Tool comparison
 
-Licences, stars (rounded to 0.1k), push dates and archived flags were read from upstream repositories on 2026-10-11 (**Opened**); CNCF levels come from the CNCF landscape file (**Opened**). Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh). The signals that drove the picks are interoperability (OpenTelemetry first), licence (open-core and source-available boundaries called out) and adoption. Evaluation tools moved to [P08 §3](./08-evaluation-quality.md#3-tool-comparison).
+Licences, stars and current release tags were originally read on 2026-10-11; this review adds spot-checks for missing tools and status corrections opened on 2026-10-17. Evidence grades follow [Methodology §4.1](./00-methodology.md#41-evidence-grades): repository pages, `LICENSE` files and release pages read on GitHub are **Opened**; acquisitions or foundation-governance claims that still rely on secondary reporting remain **Search-cited**. Evaluation-specific runners are covered in [P08 §3](./08-evaluation-quality.md#3-tool-comparison).
 
-| Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
-|------------|--------------|---------------|---------|--------------|----------------|
-| **Telemetry standard and SDK shape** | **OpenTelemetry** | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF Graduated | OpenLIT (`OSI` ✅ Apache-2.0), vendor SDKs | Choose **OpenTelemetry** when you want vendor-neutral traces, metrics and logs that survive tool changes |
-| **Collector / pipeline** | **OpenTelemetry Collector** (7.7k★; v0.162.0, 2026-09-28) | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF Graduated | Vendor agents | Choose the **Collector** to redact, sample and fan out OTLP centrally |
-| **Time-series metrics store** | **Prometheus** (66.5k★) | `OSI` ✅ (Apache-2.0) | Prometheus / CNCF Graduated | Managed metrics backends, OpenCost for cost views | Choose **Prometheus** when Kubernetes and service-level metrics are already core platform concerns |
-| **Distributed trace backend** | **Jaeger** (23.3k★) | `OSI` ✅ (Apache-2.0) | Jaeger / CNCF Graduated | Grafana Tempo (`OSI` ✅ AGPL-3.0; 5.5k★), Langfuse or Phoenix for LLM-specific views | Choose **Jaeger** for a general OTLP trace store next to the LLM-specific UI; choose **Tempo** if you already run the Grafana stack and accept AGPL |
-| **Dashboards and exploratory analysis** | **Grafana** (77.2k★) | `OSI` ✅ (AGPL-3.0) | Grafana Labs | Langfuse UI (`Open-core` ⚠️), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Grafana** for one shared dashboard surface across AI and non-AI services if you accept AGPL obligations |
-| **LLM trace and prompt analytics** | **Langfuse** (35.6k★; v4.56.0, 2026-10-09) | `Open-core` ⚠️ (MIT outside the `ee/`, `web/src/ee/` and `worker/src/ee/` directories, which carry a separate licence; copyright held by ClickHouse, Inc.) | Langfuse, now part of ClickHouse (search-cited acquisition; copyright line read from `LICENSE`) | Opik (`OSI` ✅ Apache-2.0; 22.5k★), OpenLIT (`OSI` ✅ Apache-2.0), Arize Phoenix (`Source-available` ⚠️ Elastic-2.0; 11.8k★), MLflow tracing (`OSI` ✅ Apache-2.0; 28.3k★) | Choose **Langfuse** for a purpose-built LLM observability UI with prompt management when the `ee/` boundary is acceptable (confirm needed features are outside `ee/`); choose **Opik** or **MLflow** for a fully Apache-2.0 option |
-| **Open instrumentation for LLM apps** | **OpenLLMetry** (7.5k★; 0.62.4, 2026-09-29) | `OSI` ✅ (Apache-2.0) | Traceloop maintainers | OpenLIT (`OSI` ✅ Apache-2.0; 2.8k★), OpenTelemetry GenAI contrib instrumentations | Choose **OpenLLMetry** for OTel auto-instrumentation of LLM and vector-store SDKs; choose **OpenLIT** when you also want bundled dashboards and GPU monitoring. Both emit plain OTLP |
-| **Agent run tracing (AgentOps)** | **Langfuse / Phoenix / MLflow tracing** via OTel | see rows above | see rows above | AgentOps (`OSI` ✅ MIT; 5.9k★; last release 0.4.21 in 2025-08, last push 2026-06, so slower), Laminar (`OSI` ✅ Apache-2.0; 3.4k★) | Choose a general LLM trace UI when agents are built on several frameworks; choose **AgentOps** or **Laminar** only if their agent-specific views (replay, session timeline) matter more than ecosystem breadth |
-| **Cost allocation** | **OpenCost** (6.8k★) | `OSI` ✅ (Apache-2.0) | OpenCost / CNCF Incubating | Prometheus recording rules, Grafana dashboards, internal chargeback models | Choose **OpenCost** for Kubernetes cost allocation joined to model usage and tenant views |
+Selection criteria used in this pillar:
+
+- **OpenTelemetry fit:** the default path must emit or consume plain OTLP.
+- **Separation of planes:** metrics, traces and retained prompt-event analytics have different cost and cardinality profiles.
+- **Licence boundary:** where a credible `OSI` option exists, it should be the default or the open-core trade-off must be explicit.
+- **Cross-pillar usefulness:** traces should feed [P08](./08-evaluation-quality.md), chargeback in [P10](./10-governance-finops.md) and incident response in [P11](./11-reliability-capacity.md).
+
+| Capability | Default pick | Licence label | Steward | Alternatives | Decision criteria | Choose the default when… | Do not choose the default when… |
+|------------|--------------|---------------|---------|--------------|-------------------|---------------------------|---------------------------------|
+| **Telemetry standard and SDK shape** | **OpenTelemetry** | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF Graduated | OpenLIT (`OSI` ✅ Apache-2.0), vendor SDKs | Vendor neutrality, span portability, trace plus metrics plus logs | you want traces, metrics and logs that survive backend changes | a closed, single-vendor stack is an explicit strategic choice and portability is not valued |
+| **Collector / pipeline** | **OpenTelemetry Collector** (7.7k★; v0.163.0, 2026-10-14) | `OSI` ✅ (Apache-2.0) | OpenTelemetry / CNCF Graduated | Vendor agents | Central redaction, sampling, enrichment and fan-out | you need one place to redact, sample and route OTLP centrally | every workload is so small that per-app exporters are truly simpler, which is rare past a pilot |
+| **Time-series metrics store** | **Prometheus** (66.6k★; v3.13.4, 2026-10-02) | `OSI` ✅ (Apache-2.0) | Prometheus / CNCF Graduated | Managed metrics backends, OpenCost for cost views | Kubernetes fit, alerting, existing SRE muscle memory | Kubernetes and service-level metrics are already a core platform concern | you need only retained logs or traces and have no appetite for operating pull-based metrics |
+| **Distributed trace backend** | **Jaeger** (23.3k★; v2.22.0, 2026-10-06) | `OSI` ✅ (Apache-2.0) | Jaeger / CNCF Graduated | Grafana Tempo (`OSI` ✅ AGPL-3.0; 5.5k★), Phoenix or Opik for LLM-specific views | General OTLP trace storage, integration breadth, licence posture | you want a general OTLP trace store next to an LLM-specific UI and prefer an `OSI` backend | you already run a Grafana-only stack and accept AGPL, where **Tempo** may reduce moving parts |
+| **Dashboards and exploratory analysis** | **Grafana** (77.3k★; v13.2.4, 2026-10-13) | `OSI` ✅ (AGPL-3.0) | Grafana Labs | Langfuse UI (`Open-core` ⚠️), Phoenix (`Source-available` ⚠️ Elastic-2.0) | Shared dashboards across AI and non-AI services, SRE familiarity, alert annotation | you need one shared dashboard surface across platform and AI traffic and accept AGPL obligations | AGPL obligations are unacceptable, or the team only wants an LLM-specific UI and no general observability surface |
+| **LLM trace and prompt analytics** | **Opik** (22.7k★; 2.2.103, 2026-10-16) | `OSI` ✅ (Apache-2.0) | Comet | Langfuse (`Open-core` ⚠️; 36.0k★), OpenLIT (`OSI` ✅ Apache-2.0), Phoenix (`Source-available` ⚠️ Elastic-2.0; 11.9k★), MLflow tracing (`OSI` ✅ Apache-2.0; 28.4k★) | OTLP or framework integrations, trace-linked eval hand-off, prompt management, licence posture | you want one pure-OSS LLM observability UI that also crosses cleanly into datasets, online evaluators and P08 score storage | your team already standardised on Langfuse and accepts the `ee/` boundary, or on MLflow for all experiment records |
+| **Open instrumentation for LLM apps** | **OpenLLMetry** (7.5k★; 0.62.4, 2026-09-29) | `OSI` ✅ (Apache-2.0) | Traceloop maintainers | OpenLIT (`OSI` ✅ Apache-2.0; 2.9k★), OpenTelemetry GenAI contrib instrumentations | Auto-instrumentation breadth, low friction, OTLP purity | you want OTel auto-instrumentation for LLM, vector-store and framework SDKs without adopting a full platform | you also want bundled dashboards, guardrails or GPU monitoring in one package, where **OpenLIT** may be a better fit |
+| **Prompt and event analytics warehouse** | **ClickHouse** (50.5k★; v26.3.54.6-lts, 2026-10-17) | `OSI` ✅ (Apache-2.0) | ClickHouse, Inc. and community | OpenSearch (`OSI` ✅ Apache-2.0), object storage plus query engine, backend-specific stores bundled with Opik or Langfuse | Need for long-retention, SQL-heavy, high-cardinality analysis of prompts, tool events and feedback | you need retained, queryable prompt and event data for forensics, optimisation or audit, beyond what a trace UI stores comfortably | traces and metrics already answer the questions, or the team does not want to operate another analytics store yet |
+| **Agent run tracing (AgentOps)** | **OTel span model plus the LLM UI above** | see rows above | see rows above | AgentOps (`OSI` ✅ MIT; 5.9k★), Laminar (`OSI` ✅ Apache-2.0; 3.4k★), TruLens (`OSI` ✅ MIT; 3.6k★) | Multi-framework coverage, replay needs, alignment with P06 state model | you build agents on several frameworks and want one shared trace vocabulary rooted in OTel | a single agent framework's bespoke session UI is more valuable than ecosystem breadth |
+| **Cost allocation** | **OpenCost** (6.8k★; v1.121.3, 2026-09-16) | `OSI` ✅ (Apache-2.0) | OpenCost / CNCF Incubating | Prometheus recording rules, Grafana dashboards, internal chargeback models | Kubernetes cost allocation, joinability with labelled AI usage | you need Kubernetes cost allocation joined to model usage and tenant views | the platform is too small for a dedicated cost model and simple dashboards already answer the finance questions |
+
+### 3.1 Trade-offs and default reasoning
+
+1. **OpenTelemetry remains the hard default.** Everything else should either consume OTLP or sit behind the Collector.
+2. **Prometheus plus Grafana stay the shared SRE path.** They are not LLM-specific, but that is the point: AI workloads must still look like production workloads to operators.
+3. **Use one OTLP-fed LLM UI, not a second instrumentation stack.** Opik is the pure-OSS default here; Langfuse stays a strong alternative when its open-core boundary is acceptable and its prompt workflows matter more than licence purity.
+4. **Treat retained prompt-event analytics as a separate storage problem.** High-cardinality prompt and feedback payloads belong in a warehouse or event backend such as ClickHouse, not in metrics labels.
 
 Notes:
 
-- Langfuse's open-core boundary and Phoenix's Elastic-2.0 licence (no offering it as a managed service) are the two licence risks in this table; the Apache-2.0 alternatives cover tracing without them.
+- Langfuse's `ee/` boundary and Phoenix's Elastic-2.0 licence are the main licence risks in this table; the Apache-2.0 alternatives cover the core use cases.
 - Instrumentation libraries emit OTLP, so the trace UI can be swapped without re-instrumenting.
-- **OpenTelemetry GenAI semantic conventions** now live in a dedicated repository, [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai) (Apache-2.0, **Opened**). The old `docs/gen-ai/` pages in the core repository are redirect stubs. The agent-span page we read is marked **Development** (not Stable); treat the whole GenAI set as unstable and pin versions.
+- **OpenTelemetry GenAI semantic conventions** now live in a dedicated repository, [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai) (Apache-2.0, **Opened**). The old `docs/gen-ai/` pages in the core repository are redirect stubs. The agent-span page remains **Development** (not Stable); pin versions and shield dashboards behind Collector transforms.
 
 Default platform stance:
 
 1. **OpenTelemetry first.** Everything else should either consume OTel data or complement it.
 2. **Prometheus + Grafana** remain the default shared metrics path for platform teams.
-3. **One LLM trace UI** beside the shared plane, fed by OTLP, not a second instrumentation stack.
-4. **Make cost attribution a design input, not a finance afterthought.**
+3. **One OTLP-fed LLM trace UI** beside the shared plane, not a second instrumentation stack.
+4. **Keep long-retention prompt and event analytics out of Prometheus.** Use a warehouse or log backend for that data.
+5. **Make cost attribution a design input, not a finance afterthought.**
 
 ## 4. Reference design
 
 1. **Instrumentation in the gateway, application, retrieval service, agent runtime, tool runners and model-serving path** emits OTel spans and metrics.
 2. **OpenTelemetry Collector** receives OTLP, applies redaction, tail sampling and attribute transforms, and fans out to metrics, traces and log backends.
 3. **Prometheus** scrapes service and infrastructure metrics (including inference-engine metrics from [P03](./03-model-serving.md)); **Grafana** overlays service SLIs with AI-specific ones such as TTFT, token throughput and cost per request.
-4. **LLM observability UI** (Langfuse, Phoenix, Opik or MLflow), fed by OpenLLMetry or OpenLIT, sits beside the shared plane, not instead of it.
-5. **Agent trace model:** one root span per agent run; child spans for each model call, tool call, retrieval and sub-agent handoff; human approvals and policy denials recorded as span events. See [P06](./06-agents-mcp.md) for the hooks.
-6. **Eval hand-off to [P08](./08-evaluation-quality.md):** sampled traces flow into dataset curation; eval and user-feedback scores are written back as annotations keyed by trace ID.
-7. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway-routing.md) with infrastructure signals and chargeback tags consumed by [P10](./10-governance-finops.md).
+4. **LLM observability UI** (Opik, Langfuse, Phoenix or MLflow), fed by OpenLLMetry or OpenLIT, sits beside the shared plane, not instead of it.
+5. **Retained event store** (for example ClickHouse or another warehouse) keeps high-cardinality prompt, tool and feedback payloads with shorter retention and stronger deletion controls than the metric plane.
+6. **Agent trace model:** one root span per agent run; child spans for each model call, tool call, retrieval and sub-agent handoff; human approvals and policy denials recorded as span events. See [P06](./06-agents-mcp.md) for the hooks.
+7. **Eval hand-off to [P08](./08-evaluation-quality.md):** sampled traces flow into dataset curation; eval and user-feedback scores are written back as annotations keyed by trace ID.
+8. **Cost view** joins tenant, feature and model labels from [P02](./02-ai-gateway-routing.md) with infrastructure signals and chargeback tags consumed by [P10](./10-governance-finops.md).
 
 Design rules:
 
@@ -134,7 +152,7 @@ Standard labels: tenant or team, product or feature, model name, route or policy
 
 ### 5.6 Payload capture and privacy
 
-Classify prompts, tool arguments and outputs before storing. Redact in the Collector, not only in the app. Apply shorter retention to raw content than to metadata, and honour deletion requests across the trace store.
+Classify prompts, tool arguments and outputs before storing. Redact in the Collector, not only in the app. Apply shorter retention to raw content than to metadata, and honour deletion requests across the trace store and any retained event warehouse. If you persist prompt or tool payloads for long-term analysis, keep that path separate from Prometheus and bound it with explicit retention, encryption and delete workflows.
 
 ## 6. Operations
 
@@ -143,6 +161,7 @@ Classify prompts, tool arguments and outputs before storing. Redact in the Colle
 - **Sampling:** tail-sample to keep errors, slow traces, agent runs with many steps and flagged outputs; keep a small random baseline.
 - **Threshold ownership:** assign owners for latency, cost and error thresholds.
 - **Cost review:** compare cost per successful task, not only cost per request.
+- **Warehouse hygiene:** monitor retention, compaction and deletion latency for any prompt-event warehouse.
 - **Alerting:** alert on symptoms such as rising empty retrievals, tool failure rates, loop-count outliers and refusal spikes, not only CPU and memory.
 - **Telemetry health:** monitor dropped spans, Collector queue saturation and ingestion lag.
 
@@ -151,6 +170,7 @@ Heuristics:
 - If a cost spike appears, break it down by tenant, model and route before cutting global limits.
 - If latency looks fine but quality falls, compare retrieval index, prompt version and tool path, then follow the regression workflow in [P08](./08-evaluation-quality.md).
 - If an agent's token use jumps, inspect step counts and repeated tool calls in traces before changing models.
+- If operators start putting prompt text into labels, stop and move that data to the retained event store instead.
 
 ## 7. Pitfalls
 
@@ -158,6 +178,7 @@ Heuristics:
 - **Logging raw prompts by default.** This creates avoidable privacy and secret-handling risk.
 - **Treating telemetry as evaluation.** Dashboards show what happened, not whether it was right; pair with [P08](./08-evaluation-quality.md).
 - **High-cardinality labels** (user, prompt text) that blow up the metrics store.
+- **Keeping long prompt payloads only in dashboards.** Forensics and deletion workflows need a deliberate retained-event path, not screenshots and ad-hoc exports.
 - **Building on unstable conventions without pinning.** GenAI attribute names are still in Development.
 - **Two instrumentation stacks.** Mixing vendor SDKs and OTel splits traces; standardise on OTLP.
 - **Agent runs flattened into one span.** You lose where loops and wrong tool calls happen.
@@ -173,6 +194,7 @@ Heuristics:
 - [ ] Grafana dashboard for request rate, error rate, TTFT and total latency
 - [ ] Basic usage and cost labels (tenant, model, feature) attached to requests
 - [ ] Raw payload capture off or restricted by default
+- [ ] Decision made on whether any prompt or tool payloads are retained outside the trace UI
 
 ### Production
 
@@ -180,6 +202,7 @@ Heuristics:
 - [ ] Redaction in the Collector, tested with canary data
 - [ ] LLM trace UI deployed on OTLP; eval and feedback scores attachable to traces ([P08](./08-evaluation-quality.md))
 - [ ] GenAI semantic-convention version pinned and documented
+- [ ] Retained prompt-event analytics store selected, with bounded retention and delete workflow
 - [ ] Cost dashboards joined with tenant, feature and model labels, with a versioned price table
 - [ ] Runbooks exist for latency, cost and tool-failure regressions
 
@@ -190,6 +213,7 @@ Heuristics:
 - [ ] Threshold ownership mapped to engineering, product and risk stakeholders
 - [ ] Chargeback or showback fed from telemetry and aligned with [P10](./10-governance-finops.md)
 - [ ] Long-term telemetry retention, privacy and legal review completed
+- [ ] Prompt-event warehouse retention tiers, deletion SLAs and encryption controls reviewed
 - [ ] Post-incident process exports failing traces into P08 regression datasets
 
 ## 9. Sources
@@ -201,15 +225,15 @@ Primary upstreams to re-check:
 - [OpenTelemetry Collector repository](https://github.com/open-telemetry/opentelemetry-collector)
 - [Prometheus repository](https://github.com/prometheus/prometheus)
 - [Grafana repository](https://github.com/grafana/grafana) and [Tempo repository](https://github.com/grafana/tempo)
+- [Jaeger repository](https://github.com/jaegertracing/jaeger)
+- [Opik repository](https://github.com/comet-ml/opik)
 - [Langfuse repository](https://github.com/langfuse/langfuse) and [`LICENSE`](https://github.com/langfuse/langfuse/blob/main/LICENSE)
 - [Arize Phoenix repository](https://github.com/Arize-ai/phoenix) and [`LICENSE`](https://github.com/Arize-ai/phoenix/blob/main/LICENSE)
-- [Opik repository](https://github.com/comet-ml/opik)
 - [OpenLIT repository](https://github.com/openlit/openlit)
 - [OpenLLMetry repository](https://github.com/traceloop/openllmetry)
 - [MLflow repository](https://github.com/mlflow/mlflow)
-- [Jaeger repository](https://github.com/jaegertracing/jaeger)
-- [AgentOps repository](https://github.com/AgentOps-AI/agentops) and [Laminar repository](https://github.com/lmnr-ai/lmnr)
+- [ClickHouse repository](https://github.com/ClickHouse/ClickHouse)
 - [OpenCost repository](https://github.com/opencost/opencost)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
 
-Licences, stars, release dates and the GenAI-conventions move were **Opened** on 2026-10-11; the Langfuse acquisition is **Search-cited**. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+The original table facts were read on 2026-10-11 (**Opened**). Added rows and status corrections for Opik, OpenLIT, ClickHouse and current GenAI-conventions guidance were spot-checked on 2026-10-17 (**Opened**). Any remaining governance or ownership notes remain **Search-cited** where stated. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).

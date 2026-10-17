@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-> **TL;DR** — Adopt the platform in four phases: a governed gateway with visibility and cost attribution first, then self-hosted serving, a model registry, retrieval and offline evals, then security, governance, a platform portal and resilience, and finally scale, adaptation and hardening. Each phase maps to the MVP, Production and Enterprise levels in the pillar checklists, and each ends with an exit test you can actually run.
+> **TL;DR** — Adopt the platform in four phases: a governed gateway with visibility and cost attribution first, then self-hosted serving, a model registry, retrieval and offline evals, then security, governance, a platform portal and resilience, and finally scale, adaptation and hardening. Each phase maps to the MVP, Production and Enterprise levels in the pillar checklists, names the key dependencies and skills, and ends with an exit test you can actually run.
 
 *Snapshot: 2026-10-11 · Related: [Reference architecture](./01-reference-architecture.md) · [Methodology](./00-methodology.md) · [Tool landscape](./15-tool-landscape.md)*
 
@@ -37,9 +37,10 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Mirror model artifacts into an internal store and start a model registry with licence review | [P04](./04-model-lifecycle-adaptation.md) |
 | Add routing with a fallback to a second backend | [P02](./02-ai-gateway-routing.md) |
 | Stand up a vector store and an ingestion pipeline for one corpus; version prompts as assets | [P05](./05-data-knowledge-rag.md) |
+| Add one queued batch or backfill path that uses the same model aliases, guardrails and telemetry as the online path | [P03](./03-model-serving.md), [P11](./11-reliability-capacity.md) |
 | Build a golden dataset and run offline evals on every model, prompt or retrieval change, as a CI gate | [P08](./08-evaluation-quality.md) |
 
-**Exit test:** a model swap is a configuration change, a registered model has an owner and licence record, and an eval run gates the swap.
+**Exit test:** a model swap is a configuration change, a registered model has an owner and licence record, an eval run gates the swap, and one batch job completes without bypassing the gateway.
 
 ## Phase 3: Safe, accountable and usable (Production)
 
@@ -48,11 +49,12 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Enable input and output guardrails; run a first red-team pass | [P09](./09-security-safety.md) |
 | Define SLOs; add exact caching, a first backup, and later autoscaling, timeouts, circuit breakers and a first capacity plan | [P11](./11-reliability-capacity.md) |
 | Register models and prompts with risk metadata; record audit logs; add budgets and alerts | [P10](./10-governance-finops.md) |
+| Encode data classes and residency rules in routing, retrieval and egress policy | [P02](./02-ai-gateway-routing.md), [P05](./05-data-knowledge-rag.md), [P10](./10-governance-finops.md) |
 | Add agent runtimes with their own identities, a tool gateway, approval gates and sandboxed execution | [P06](./06-agents-mcp.md) |
 | Sample and score production traffic online; calibrate judges against human labels | [P08](./08-evaluation-quality.md) |
 | Launch the developer portal and one golden-path template that mints identity, key and quota | [P13](./13-platform-experience.md) |
 
-**Exit test:** a game-day failure of the primary backend meets the SLO, an audit query answers "who used which model with which data", and a team onboards itself from the portal without a ticket.
+**Exit test:** a game-day failure of the primary backend meets the SLO, an audit query answers "who used which model with which data", a residency test proves the blocked route stays blocked, and a team onboards itself from the portal without a ticket.
 
 ## Phase 4: Scale, adapt and harden (Enterprise)
 
@@ -64,9 +66,10 @@ This roadmap is a suggested order, not a schedule. It contains no duration estim
 | Adapt models where evals show a gap that prompting and RAG cannot close (LoRA, distillation), quantise for cost, publish deprecation schedules | [P04](./04-model-lifecycle-adaptation.md) |
 | Inference-aware routing, prefix-cache-aware load balancing, disaggregated serving where measurements justify it | [P03](./03-model-serving.md) |
 | Harder tenant isolation (virtual or dedicated clusters) where needed; support model and adoption metrics | [P13](./13-platform-experience.md), [P09](./09-security-safety.md) |
+| Add sovereign or multimodal deployment variants only where product or policy requires them, reusing the same gateway, lineage and eval controls | [Reference architecture](./01-reference-architecture.md), [P03](./03-model-serving.md), [P10](./10-governance-finops.md) |
 | Agent-to-agent protocols, break-glass access and agent trajectory evals | [P06](./06-agents-mcp.md), [P08](./08-evaluation-quality.md) |
 
-**Exit test:** an independent review can reproduce the control evidence from Git and logs, and a GPU budget forecast matches actual use within an agreed margin.
+**Exit test:** an independent review can reproduce the control evidence from Git and logs, a GPU budget forecast matches actual use within an agreed margin, and the sovereign or multi-region failover design has been drilled rather than only diagrammed.
 
 ## Checklist coverage
 
@@ -96,8 +99,45 @@ Three consequences: the platform reaches pillar-level MVP for security and gover
 - Cheapest adaptation first: prompting, then RAG, then fine-tuning, and only when the eval gate shows the earlier steps fall short ([P04](./04-model-lifecycle-adaptation.md)).
 - Re-verify tool facts when adopting them (see [methodology 5](./00-methodology.md#5-snapshot-and-refresh)).
 
-## Anti-goals
+## Key dependencies
+
+| Dependency | Why it matters |
+|------------|----------------|
+| [P02](./02-ai-gateway-routing.md) before [P09](./09-security-safety.md) guardrails | The safest place to enforce most request-time controls is the shared entry point; adding guardrails first in application code creates bypasses |
+| [P07](./07-observability-evaluation.md) before online [P08](./08-evaluation-quality.md) | Online evals without traces, request IDs and cost tags produce scores you cannot explain or action |
+| Offline [P08](./08-evaluation-quality.md) before [P04](./04-model-lifecycle-adaptation.md) tuning | Without a regression gate, fine-tuning and distillation become cost without evidence |
+| [P10](./10-governance-finops.md) data classification before hybrid or sovereign rollout | Residency and provider policy must exist before routing can enforce them |
+| [P11](./11-reliability-capacity.md) quota and headroom before heavy batch or agent rollout | Batch backfills, eval farms and tool-using agents can starve live traffic if they arrive before admission control |
+| [P13](./13-platform-experience.md) portal after the contract exists | Self-service should mint known-good identity, keys, quotas and dashboards; a portal before the platform contract just scales confusion |
+
+## Teams and skills by phase
+
+| Phase | Minimum skills that must be explicitly staffed |
+|-------|-----------------------------------------------|
+| Phase 0 | Kubernetes platform engineering, GitOps/IaC, cluster security, observability |
+| Phase 1 | API gateway operations, identity/OIDC, FinOps reporting, developer enablement |
+| Phase 2 | GPU/Kubernetes operations, model serving, registry/package management, retrieval engineering, CI automation |
+| Phase 3 | AI security, threat modelling, SRE, evaluation design, product support or platform enablement |
+| Phase 4 | Capacity planning, multi-cluster networking, adaptation/fine-tuning, compliance or GRC liaison, incident response |
+
+If one person covers several boxes, name that explicitly. The failure mode is not "too few tools"; it is "nobody owns the cross-cutting work".
+
+## Common risks and mitigations
+
+| Risk | Usually appears in | Mitigation |
+|------|--------------------|------------|
+| Gateway bypass via direct provider keys or side-channel services | Phase 1 onwards | Remove provider keys from clients, monitor egress and make the gateway the only supported contract |
+| Premature fine-tuning | Phase 2 | Require a failing eval and a written reason why prompting or RAG cannot close the gap |
+| Batch and eval jobs starving live traffic | Phase 2 onwards | Separate queues, quotas and headroom; test failure modes before adding bigger models |
+| Sovereignty or residency treated as a documentation note only | Phase 3 onwards | Encode it in routing, storage placement, tenancy and audit tests |
+| Portal-first platform engineering | Phase 3 | Launch one or two high-value golden paths only after identity, quota, dashboards and support ownership exist |
+| Tool sprawl and duplicate control planes | All phases | One default per capability, published exceptions, and quarterly review of what is actually in use |
+
+## Anti-patterns
 
 - Pre-training, feature stores and general data pipelines (out of scope, [methodology 2.4](./00-methodology.md#24-deliberate-non-pillars)).
 - Fine-tuning before an eval gate exists, or because it is fashionable.
 - Adopting every tool in the [catalog](./15-tool-landscape.md); one default per capability is the point.
+- Treating batch, backfill and eval traffic as "not production", so it bypasses quotas, tracing or guardrails.
+- Declaring residency or sovereign requirements without proving them in routing and data-placement tests.
+- Launching agents before workload identity, audit and approval paths exist.

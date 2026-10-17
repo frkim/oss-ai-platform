@@ -20,18 +20,28 @@
 | **AI gateway** | A single governed entry point for model traffic that provides a unified API, authentication, quotas, metering and policy hooks. See [AI gateway and routing](./02-ai-gateway-routing.md). |
 | **Air-gapped** | Running without any connection to the public internet. It affects how images, models and updates are delivered. See [Security and safety](./09-security-safety.md). |
 | **Autoscaling** | Automatically adding or removing replicas (pod autoscaling) or nodes (cluster autoscaling) in response to load. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
+| **Batch inference** | Processing queued model requests outside an interactive request/response session, often for backfills, scoring or report generation. See [Reference architecture](./01-reference-architecture.md). |
+| **BM25** | A lexical ranking algorithm widely used in search engines, often paired with vectors in hybrid retrieval. See [Knowledge and context](./05-data-knowledge-rag.md). |
 | **Canary release** | Sending a small share of traffic to a new model or version before a full rollout. See [AI gateway and routing](./02-ai-gateway-routing.md). |
 | **Champion / challenger** | The model version currently serving production traffic (champion) and the candidate being compared against it (challenger). See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md). |
 | **Chargeback / showback** | Charging teams for the cost they cause (chargeback) or only reporting it to them (showback). See [Governance, risk, compliance and FinOps](./10-governance-finops.md). |
 | **Chat completions API** | The request and response format popularised by OpenAI for conversational models; the de facto interface that gateways and inference engines implement. See *OpenAI-compatible API*. |
+| **CI / CD** | Continuous integration and continuous delivery or deployment: automated build, test and release pipelines used to gate platform and model changes. See [Evaluation and quality](./08-evaluation-quality.md) and [Foundation and delivery](./12-foundation-infrastructure.md). |
 | **Chunk** | A piece of a document sized for embedding and retrieval. See [Knowledge and context](./05-data-knowledge-rag.md). |
 | **Circuit breaker** | A resilience pattern that stops sending requests to a failing backend for a while so that it can recover. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
+| **CNAI** | Cloud Native AI: the CNCF framing that combines cloud-native platforms with AI and ML workloads. See the [methodology](./00-methodology.md). |
 | **CNCF** | Cloud Native Computing Foundation: the Linux Foundation body that hosts Kubernetes, Prometheus and other projects, with Sandbox, Incubating and Graduated maturity levels. |
+| **Control plane** | The shared layer that enforces identity, routing, policy, budgets and audit across workloads, distinct from the model-serving data plane. See [Reference architecture](./01-reference-architecture.md). |
 | **Context budget** | A per-request token allowance split across instructions, history, memory, retrieved chunks and tool output (context-window budgeting), enforced when the prompt is assembled. See [Knowledge and context](./05-data-knowledge-rag.md). |
 | **Context engineering** | Deliberately selecting, ordering and compressing what goes into the model's context: retrieval, memory, prompts and tool results. See [Knowledge and context](./05-data-knowledge-rag.md). |
+| **CPU** | Central processing unit: the general-purpose processor on which gateways, control-plane services and some small models run. Contrast with GPU. |
 | **CRD** | CustomResourceDefinition: a Kubernetes extension point that lets an operator add its own resource types. |
+| **Data residency** | Keeping data and derived artifacts in approved regions or jurisdictions, enforced by routing, storage placement and policy rather than by contract text alone. See [Governance, risk, compliance and FinOps](./10-governance-finops.md). |
 | **Disaggregated inference** | Running the prefill and decode phases of generation on separately scaled workers. See *Prefill* and [Model serving and inference](./03-model-serving.md). |
+| **Disaster recovery (DR)** | The plans, backups and failover steps used to restore a service after a serious outage or regional loss. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
 | **Distillation** | Training a smaller student model to reproduce the outputs of a larger teacher model. Check the teacher's licence for restrictions on using its outputs. See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md). |
+| **DLP** | Data loss prevention: controls that stop sensitive data leaving approved boundaries, for example by scanning prompts, outputs or tool responses. See [Security and safety](./09-security-safety.md). |
+| **DORA** | The DevOps Research and Assessment metrics used to track software delivery performance, such as deployment frequency and change-failure rate. See [Platform experience and tenancy](./13-platform-experience.md). |
 | **DPO / preference tuning** | Direct Preference Optimization and related methods that tune a model on pairs of preferred and rejected answers instead of a reward model. See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md). |
 | **DRA** | Dynamic Resource Allocation: the Kubernetes mechanism for requesting and sharing devices such as GPUs. See [Model serving and inference](./03-model-serving.md). |
 | **Drift** | A gradual change in inputs, outputs or quality over time, for example after a model, quantisation or data change. See [Evaluation and quality](./08-evaluation-quality.md). |
@@ -57,10 +67,12 @@
 | **Golden path** | A supported, pre-wired way to do a common task (for example "create an AI project") that gives teams guardrails and defaults without a ticket. See [Platform experience and tenancy](./13-platform-experience.md). |
 | **Golden set** | A curated, versioned set of inputs with expected outcomes or grading criteria, used to evaluate changes and gate releases. See [Evaluation and quality](./08-evaluation-quality.md). |
 | **GraphRAG** | Retrieval that builds a knowledge graph and community summaries from a corpus so questions about the whole corpus can be answered, at higher indexing cost. See [Knowledge and context](./05-data-knowledge-rag.md). |
+| **GPU** | Graphics processing unit: the accelerator on which most self-hosted LLM serving, fine-tuning and large-scale embedding runs depend. See [Model serving and inference](./03-model-serving.md) and [Reliability, performance and capacity](./11-reliability-capacity.md). |
 | **Guardrail** | A control that checks or constrains model inputs and outputs: content filters, prompt-injection detection, PII masking and similar. See [Security and safety](./09-security-safety.md). |
 | **Hallucination** | Model output that is fluent but unsupported by facts or the supplied context. |
 | **Headroom** | Spare capacity kept above current demand (GPUs, quota or rate limit) so that spikes, failover and rollouts do not cause errors. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
 | **Hedging** | Sending the same request to more than one backend and using the first response, to cut tail latency. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
+| **Hybrid deployment** | A platform shape that combines self-hosted models with external provider APIs behind one gateway, usually for mixed sensitivity or cost/performance reasons. See [Reference architecture](./01-reference-architecture.md). |
 | **Human-in-the-loop** | A control point where a person approves or rejects an agent action before it takes effect. See [Agents, tools and protocols](./06-agents-mcp.md). |
 | **IaC** | Infrastructure as code: infrastructure defined in versioned, reviewable files. See [Foundation and delivery](./12-foundation-infrastructure.md). |
 | **Inference** | Running a trained model to produce outputs. Contrast with training. |
@@ -79,13 +91,21 @@
 | **mTLS** | Mutual TLS: both client and server present certificates, so each proves its identity. See [Security and safety](./09-security-safety.md). |
 | **Multi-LoRA serving** | Hosting many LoRA adapters on one base model inside a single inference engine, selecting the adapter per request. See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md). |
 | **Multi-tenancy** | Serving several teams or customers from one platform with isolation of data, quota and policy. See [Platform experience and tenancy](./13-platform-experience.md). |
+| **MVP** | Minimum viable platform level: the first checklist tier in this blueprint, enough to support a controlled early workload without claiming production breadth. See [Implementation roadmap](./14-implementation-roadmap.md). |
 | **Non-human identity** | A credential identity for a workload, service or agent rather than a person, issued, scoped and rotated by the platform. See [Agents, tools and protocols](./06-agents-mcp.md) and [Security and safety](./09-security-safety.md). |
+| **NIST AI RMF** | The NIST AI Risk Management Framework: guidance for governing, mapping, measuring and managing AI risk. See [Governance, risk, compliance and FinOps](./10-governance-finops.md). |
+| **OCI** | Open Container Initiative: standards for container images and registries that are also used to package model artifacts. See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md). |
 | **OIDC / SAML / SSO** | OpenID Connect and SAML are protocols for signing users in through an identity provider; single sign-on (SSO) lets one login serve many applications. See [Security and safety](./09-security-safety.md). |
+| **OPA** | Open Policy Agent: a policy engine used to evaluate rules for admission, authorisation or governance decisions. See [Governance, risk, compliance and FinOps](./10-governance-finops.md). |
 | **OMS** | OpenSSF Model Signing: signing and verifying model weights and their file manifests with Sigstore-style identities. See [Security and safety](./09-security-safety.md). |
 | **On-behalf-of token** | A token that lets an agent or service act for a specific user with that user's limited authority, usually obtained by token exchange. See [Agents, tools and protocols](./06-agents-mcp.md). |
 | **OpenAI-compatible API** | An HTTP API that follows the request and response shapes of the OpenAI chat completions and embeddings endpoints, so existing clients work unchanged. |
 | **Open-core** | A licensing model with an open-source core and proprietary features or directories. See the [licence legend](./00-methodology.md#32-licence-policy-and-legend). |
 | **OpenTelemetry (OTel)** | A vendor-neutral standard and set of tools for traces, metrics and logs; the GenAI semantic conventions define attributes for model calls. See [Observability](./07-observability-evaluation.md). |
+| **OSS** | Open-source software. In this blueprint, platform components recommended as defaults should be OSI-licensed where credible options exist. |
+| **OSCAL** | Open Security Controls Assessment Language: a NIST format for expressing control catalogues and assessment evidence in machine-readable form. See [Governance, risk, compliance and FinOps](./10-governance-finops.md). |
+| **OTLP** | OpenTelemetry Protocol: the wire format used to send traces, metrics and logs to an OpenTelemetry Collector or backend. See [Observability](./07-observability-evaluation.md). |
+| **OWASP** | The Open Worldwide Application Security Project, whose GenAI security work includes the LLM and agentic Top 10 risk lists cited in this blueprint. See [Security and safety](./09-security-safety.md). |
 | **Open weights** | A model whose weights can be downloaded under a licence that is not OSI-approved. Open weights are not open source. |
 | **Over-refusal** | A safety control or model refusing legitimate requests; measured alongside missed attacks so that tightening a guardrail is not scored as a pure win. See [Evaluation and quality](./08-evaluation-quality.md). |
 | **OSI** | The Open Source Initiative, which approves open-source licences. |
@@ -107,6 +127,7 @@
 | **Quantisation** | Storing model weights at lower numeric precision to cut memory use and cost, at some quality risk. See [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md) and [Model serving and inference](./03-model-serving.md). |
 | **RAG** | Retrieval-augmented generation: fetching relevant documents at request time and adding them to the prompt. See [Knowledge and context](./05-data-knowledge-rag.md). |
 | **Rate limit (RPM, TPM)** | A cap on requests per minute (RPM) or tokens per minute (TPM) for a key, team or model. See [AI gateway and routing](./02-ai-gateway-routing.md). |
+| **RBAC** | Role-based access control: assigning permissions to roles and then binding users or workloads to those roles. See [Security and safety](./09-security-safety.md). |
 | **Red teaming** | Deliberately attacking an AI system to find weaknesses before real attackers do. See [Security and safety](./09-security-safety.md). |
 | **Safetensors** | A model-weight file format that cannot execute code on load, unlike Python pickle files. See [Security and safety](./09-security-safety.md). |
 | **Sandbox** | An isolated runtime, such as gVisor or Kata Containers, in which untrusted or side-effecting code runs. See [Agents, tools and protocols](./06-agents-mcp.md). |
@@ -117,8 +138,11 @@
 | **Shadow testing** | Sending a copy of live traffic to a candidate model or version and comparing its outputs without returning them to users. See [Evaluation and quality](./08-evaluation-quality.md). |
 | **SLI / SLO** | A service level indicator is a measured quantity such as latency; a service level objective is the target for it. See [Reliability, performance and capacity](./11-reliability-capacity.md). |
 | **SLSA** | Supply-chain Levels for Software Artifacts: a framework for build provenance and integrity. See [Security and safety](./09-security-safety.md). |
+| **SDK** | Software development kit: a packaged client library and examples that make a platform contract easier for developers to consume. See [Platform experience and tenancy](./13-platform-experience.md). |
 | **Soft vs hard tenancy** | Soft tenancy isolates trusted teams with namespaces, quotas and policy on shared nodes and control plane; hard tenancy gives untrusted tenants their own virtual or physical clusters. See [Platform experience and tenancy](./13-platform-experience.md). |
+| **Sovereign deployment** | A deployment shaped to satisfy jurisdiction, operator or procurement constraints, for example by pinning storage, control planes and model endpoints to one country or sovereign cloud boundary. See [Reference architecture](./01-reference-architecture.md). |
 | **SPDX** | Software Package Data Exchange: the standard identifiers for licences, such as `Apache-2.0`. |
+| **SPIRE** | The SPIFFE Runtime Environment: software that issues and rotates SPIFFE identities for workloads. See [Agents, tools and protocols](./06-agents-mcp.md). |
 | **Streaming** | Returning tokens as they are generated, usually over server-sent events, instead of one final response. |
 | **Tenant** | A team, application or customer that is accounted and isolated separately on the platform. See [Platform experience and tenancy](./13-platform-experience.md). |
 | **Time to first call** | How long a new team takes from request for access to its first successful model call; the headline onboarding metric. See [Platform experience and tenancy](./13-platform-experience.md). |
