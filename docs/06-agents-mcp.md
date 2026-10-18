@@ -37,28 +37,48 @@ Ownership boundaries are important:
 | **Identity and authorisation** | Map user, service and tool identity to least privilege | Short-lived credentials beat shared static secrets; see section 5.6 for non-human agent identity |
 | **Memory and state** | Persist what matters between steps without turning prompts into databases | Source-of-truth business state still belongs in normal data stores; long-term recall is a [P05](./05-data-knowledge-rag.md) memory store |
 | **Human-in-the-loop** | Pause side-effecting steps for approval and resume with durable state | Approval gates map to risk tiers (section 5.7) |
+| **Discovery and protocol translation** | Publish approved MCP servers and agents in one catalogue, and bridge legacy REST or gRPC systems into that surface deliberately | Dynamic discovery from the public internet is a development convenience, not a production default |
 | **Agent registry and catalogue** | One inventory of agents, MCP servers and skills with owner, version, scopes and status | Feeds governance records in [P10](./10-governance-finops.md) |
 | **AgentOps hooks** | Emit traces, tool audit events and eval hooks per run, and support replay | Telemetry in [P07](./07-observability-evaluation.md); trajectory evals in [P08](./08-evaluation-quality.md) |
 | **Audit and observability** | Record tool calls, approvals, inputs, outputs and trace IDs | Deep telemetry lives in [P07](./07-observability-evaluation.md) |
 
 ## 3. Tool comparison
 
-Licences and stars were read from upstream repositories on 2026-10-11 (**Opened**; stars rounded to 0.1k). Foundation statuses are **Search-cited**. Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh). Picks were driven by licence, interoperability (MCP, A2A, OpenTelemetry) and operability (Kubernetes-native lifecycle); all projects below were pushed in the last month except AutoGen (see the note).
+The original table was based on repository checks opened on 2026-10-11. This review adds missing runtimes, registry corrections and MCP-registry status spot-checks opened on 2026-10-17. Evidence grades follow [Methodology §4.1](./00-methodology.md#41-evidence-grades): repo pages, `LICENSE` files and release pages read on GitHub are **Opened**; foundation-governance claims that still depend on secondary sources remain **Search-cited**; immature projects or preview APIs are flagged **Unverified**.
 
-| Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
-|------------|--------------|---------------|---------|--------------|----------------|
-| **Tool and resource protocol** | **MCP** | `OSI` ✅ (Apache-2.0 for new contributions; legacy contributions remain MIT during a relicensing transition) | Agentic AI Foundation (Linux Foundation), donated by Anthropic in December 2025 (search-cited) | Framework-specific tool APIs, direct HTTP wrappers, OpenAPI adapters | Choose **MCP** when you want one tool surface that multiple agent frameworks and clients can consume without bespoke adapters |
-| **Agent-to-agent protocol** | **A2A** (26.1k★) | `OSI` ✅ (Apache-2.0) | Linux Foundation; joined the Agentic AI Foundation in August 2026 (search-cited) | Queue-and-worker handoffs, webhooks, direct RPC between services | Choose **A2A** when agents are separately deployed services that need explicit handoff semantics rather than in-process function calls |
-| **Application-level agent runtime** | **LangGraph** (43.0k★) | `OSI` ✅ (MIT) | LangChain (company) | CrewAI (`OSI` ✅ MIT; 59.6k★, role-based crews), OpenAI Agents SDK (`OSI` ✅ MIT; 30.0k★, Python), Google ADK (`OSI` ✅ Apache-2.0; 21.8k★), Microsoft Agent Framework (`OSI` ✅ MIT; 14.1k★), internal workflow engine | Choose **LangGraph** when you want explicit state, checkpoints, human approvals and application-controlled execution flow; choose another only for a stack fit (for example ADK on Google tooling, Agent Framework on .NET/Azure) |
-| **Kubernetes-native agent control plane** | **kagent** (4.0k★) | `OSI` ✅ (Apache-2.0) | kagent maintainers; CNCF Sandbox project (landscape) | LangGraph (`OSI` ✅ MIT), internal controllers | Choose **kagent** when platform teams want CRDs, cluster-native lifecycle and a shared control plane for many agents |
-| **Sandbox with low friction** | **gVisor** (19.6k★) | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **gVisor** when syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM |
-| **Sandbox with stronger VM-style isolation** | **Kata Containers** (8.9k★) | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Choose **Kata Containers** when the side-effecting tools are high risk and the platform can afford the stronger isolation boundary |
-| **Per-agent sandbox lifecycle on Kubernetes** | **agent-sandbox** (4.2k★) | `OSI` ✅ (Apache-2.0) | Kubernetes SIGs (`kubernetes-sigs`) | Plain `RuntimeClass` pods (section 5.4), gVisor or Kata underneath | Choose **agent-sandbox** when you need many isolated, stateful, pausable sandboxes created per agent session through a Kubernetes API; it manages lifecycle and sits on top of gVisor or Kata rather than replacing them. Project maturity is **Unverified** |
-| **Workload identity for agents** | **SPIFFE/SPIRE** (SPIRE 2.6k★) | `OSI` ✅ (Apache-2.0) | CNCF Graduated (search-cited) | Cloud-provider workload identity (for example Kubernetes projected service-account tokens with OIDC federation), mesh-issued identity | Choose **SPIFFE/SPIRE** when agents and tool servers span clusters or clouds and need a vendor-neutral, short-lived, attested workload identity; use **projected service-account tokens** when one cluster and one IdP are enough. Delegation to users uses OAuth 2.0 Token Exchange (RFC 8693), see section 5.6 |
-| **Agent and MCP registry** | **agentregistry** (0.5k★) | `OSI` ✅ (Apache-2.0) | Solo.io-led project (search-cited); governance status **Unverified** | Official MCP Registry (7.3k★; licence read as `NOASSERTION`, so check the file), Backstage catalogue entries ([P13](./13-platform-experience.md)), a Git-backed catalogue | Choose **agentregistry** when you want one curated, versioned inventory of agents, MCP servers and skills with approval workflow; the project is young (**Unverified** maturity), so a **Git-backed catalogue** plus the portal is a safe start |
-| **MCP and agent gateway layer** | **agentgateway** (5.3k★) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Choose **agentgateway** when you want an open MCP/A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one; choose a **thin internal gateway** when you only need an allow-list and audit log. LLM-traffic gateways are owned by [P02](./02-ai-gateway-routing.md) |
+Selection criteria used in this pillar:
 
-Note: Microsoft AutoGen (61.3k★) is in maintenance mode, community-managed and pointing new users to Microsoft Agent Framework (read from its README), so it is not listed as an option. The repository `LICENSE` shows `CC-BY-4.0` for documentation; check the code licence file before reuse.
+- **Protocol neutrality:** can tools, prompts and resources move between clients and runtimes without bespoke adapters?
+- **State visibility:** can operators inspect, replay and interrupt the run, or does the framework hide control flow?
+- **Security envelope:** identity, sandboxing, egress control and approvals matter more than agent cleverness.
+- **Registry maturity:** production teams need approved inventory and ownership first, marketplace-style discovery second.
+- **Kubernetes fit:** cluster-native control planes help only when there are enough agents and enough platform owners to justify them.
+
+| Capability | Default pick | Licence label | Steward | Alternatives | Decision criteria | Choose the default when… | Do not choose the default when… |
+|------------|--------------|---------------|---------|--------------|-------------------|---------------------------|---------------------------------|
+| **Tool and resource protocol** | **MCP** | `OSI` ✅ (Apache-2.0 for new contributions; legacy contributions remain MIT during a relicensing transition) | Agentic AI Foundation (Linux Foundation), donated by Anthropic in December 2025 (**Search-cited**) | Framework-specific tool APIs, direct HTTP wrappers, OpenAPI adapters | Client and framework interoperability, stable tool schemas, resource and prompt transport | you want one tool surface that multiple agent frameworks and clients can consume without bespoke adapters | only one application and one runtime exist, with no realistic need to expose tools outside that codebase, so direct function calls are simpler |
+| **Agent-to-agent protocol** | **A2A** (26.1k★) | `OSI` ✅ (Apache-2.0) | Linux Foundation; joined the Agentic AI Foundation in August 2026 (**Search-cited**) | Queue-and-worker handoffs, webhooks, direct RPC between services | Separate deployment boundaries, explicit handoff semantics, provenance across services | agents are separately deployed services or team-owned systems that need a formal handoff contract | all participants run inside one runtime or one service boundary, where queue jobs or plain RPC are cheaper to operate |
+| **Application-level agent runtime** | **LangGraph** (43.4k★; 1.2.16, 2026-10-16) | `OSI` ✅ (MIT) | LangChain (company) | CrewAI (`OSI` ✅ MIT; 59.8k★), OpenAI Agents SDK (`OSI` ✅ MIT; 30.1k★), Google ADK (`OSI` ✅ Apache-2.0; 21.9k★), Microsoft Agent Framework (`OSI` ✅ MIT; 14.2k★), Pydantic AI (`OSI` ✅ MIT; 20.7k★), Letta (`OSI` ✅ Apache-2.0), internal workflow engine | Explicit state, checkpoints, interruptibility, ecosystem breadth, language or stack fit | you want explicit state graphs, checkpoints, human approvals and application-controlled execution flow | a lighter typed Python loop is enough, where **Pydantic AI** can be a better fit, or you need a strongly opinionated role model such as **CrewAI** |
+| **Kubernetes-native agent control plane** | **kagent** (4.0k★; v1.0.0-alpha14, 2026-10-16) | `OSI` ✅ (Apache-2.0) | kagent maintainers; CNCF Sandbox project (landscape) | LangGraph (`OSI` ✅ MIT), internal controllers | Need for CRDs, cluster-native lifecycle, shared platform ownership across many agents | platform teams want CRDs, cluster-native lifecycle and a shared control plane for many agents | there are only a few agents, or one application team owns them end to end and does not need another control plane |
+| **Sandbox with low friction** | **gVisor** (19.6k★) | `OSI` ✅ (Apache-2.0) | Google / gVisor maintainers | Kata Containers (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Isolation strength, syscall interception overhead, operational simplicity | syscall isolation is the main concern and you want a lighter-weight runtime boundary than a full VM | you need a stronger VM-style boundary for high-risk side effects or noisy multi-tenancy, where **Kata Containers** is the safer default |
+| **Sandbox with stronger VM-style isolation** | **Kata Containers** (8.9k★) | `OSI` ✅ (Apache-2.0) | Kata Containers community | gVisor (`OSI` ✅ Apache-2.0), `kubernetes-sigs/agent-sandbox` (`OSI` ✅ Apache-2.0) | Blast radius of side effects, regulator expectations, willingness to pay the overhead | side-effecting tools are high risk and the platform can afford the stronger isolation boundary | most tools are read-mostly or internal-only and the extra VM-style overhead would price the feature out |
+| **Per-agent sandbox lifecycle on Kubernetes** | **agent-sandbox** (4.3k★; v1.0.7, 2026-10-15) | `OSI` ✅ (Apache-2.0) | Kubernetes SIGs (`kubernetes-sigs`) | Plain `RuntimeClass` pods (section 5.4), gVisor or Kata underneath | Need for pausable, stateful sandboxes created per session, not just one-off pods | you need many isolated, stateful, pausable sandboxes created per agent session through a Kubernetes API | a normal `RuntimeClass` plus job or pod lifecycle is already enough, or the project maturity remains too young for your risk profile (**Unverified**) |
+| **Workload identity for agents** | **SPIFFE/SPIRE** (SPIRE 2.6k★) | `OSI` ✅ (Apache-2.0) | CNCF Graduated (**Search-cited**) | Cloud-provider workload identity, projected service-account tokens with OIDC federation, mesh-issued identity | Need for portable non-human identity, attestation and short-lived credentials across clusters or clouds | agents and tool servers span clusters or clouds and need a vendor-neutral, short-lived workload identity | one cluster and one IdP are enough, where projected service-account tokens are simpler and cheaper to run |
+| **Agent and MCP registry** | **Git-backed catalogue plus portal entries** | n/a | Your platform team | agentregistry (`OSI` ✅ Apache-2.0; 0.5k★), Official MCP Registry (`OSI` ✅ licence-transition file; 7.4k★; preview / API freeze v0.1), Backstage catalogue entries ([P13](./13-platform-experience.md)) | Approval workflow, ownership metadata, need for publish/install APIs, maturity of discovery surface | you primarily need an approved inventory with owners, versions, scopes and deployment status, and you want no dependency on a young registry service | self-service publishing, CLI install flows and discovery APIs are already a real requirement across many teams, where **agentregistry** becomes attractive |
+| **MCP and agent gateway layer** | **agentgateway** (5.4k★; v1.6.0, 2026-10-02) | `OSI` ✅ (Apache-2.0) | agentgateway maintainers; foundation status **Unverified** | IBM ContextForge (`OSI` ✅ Apache-2.0; 4.6k★), thin internal gateway | Authentication, allow-lists, audit, egress control, and whether you also need registry or protocol translation | you want an open MCP and A2A-aware proxy with authentication, allow-lists, audit and egress control instead of building one | you also need integrated registry and REST or gRPC-to-MCP federation now, where **ContextForge** may be the better fit, or you only need a very small internal allow-list proxy |
+
+### 3.1 Trade-offs and default reasoning
+
+1. **Standardise on MCP before standardising on one framework.** Tool interoperability is the slower-moving decision; frameworks churn faster.
+2. **Keep A2A optional.** Queue-based delegation covers many first releases and is easier to secure and observe.
+3. **Make the catalogue boring first.** A Git-backed approved inventory is less exciting than a live registry, but it is easier to review, back up and reconcile.
+4. **Treat sandboxes and identities as part of the control plane, not runtime garnish.** The moment an agent can write, patch or purchase, isolation and identity become product requirements.
+
+Notes:
+
+- **Official MCP Registry status.** The repository README says the registry launched in preview and later entered an API freeze for `v0.1`, not general availability. Treat it as promising infrastructure, but not yet the only production catalogue of record.
+- **AutoGen status correction.** Microsoft AutoGen remains useful as a reference and still has MIT code in `LICENSE-CODE`, but the root `LICENSE` is `CC-BY-4.0` for documentation and the README steers new users towards Microsoft Agent Framework. Keep it as legacy, not as a default.
+- **ContextForge scope.** IBM ContextForge now spans registry plus proxy duties. That breadth is useful when you need protocol translation, but it is more than many teams need on day one.
 
 Default platform stance:
 
@@ -66,6 +86,7 @@ Default platform stance:
 2. **Keep A2A optional.** Many teams can ship with a single runtime plus queue-based delegation first.
 3. **Run write-capable tools in a sandbox with short-lived identity.**
 4. **Treat the gateway around MCP servers as a control point, not as optional plumbing.**
+5. **Start the catalogue as code.** Promote to a live registry only when publish, discovery and install workflows become real operational pain.
 
 ## 4. Reference design
 
@@ -161,7 +182,8 @@ Classify tools by risk tier (read, reversible write, irreversible or external wr
 
 ### 5.8 Register agents and wire AgentOps hooks
 
-- **Registry.** Every production agent, MCP server and skill has a catalogue record: owner, version, purpose, risk tier, granted scopes, data classes, model families and status. Reconcile it against what is deployed; unregistered agents are blocked at the gateway.
+- **Registry.** Every production agent, MCP server and skill has a catalogue record: owner, version, purpose, risk tier, granted scopes, data classes, model families, protocol versions and status. Reconcile it against what is deployed; unregistered agents are blocked at the gateway.
+- **Discovery policy.** Separate approved internal records from public registries. Production agents should resolve tools from the approved catalogue first and use public registries only through a review workflow.
 - **AgentOps hooks.** Emit one trace per run with spans for model calls, tool calls, approvals and A2A handoffs ([P07](./07-observability-evaluation.md)); store enough state to replay a run; export trajectories to the evaluation pipeline for trajectory and task-success evals and regression gates ([P08](./08-evaluation-quality.md)); and report tokens and tool cost per agent for showback ([P10](./10-governance-finops.md)).
 
 ## 6. Operations
@@ -170,8 +192,10 @@ Operating agent systems is mostly about narrowing blast radius:
 
 - **Tool catalogue management:** approve, version and retire tools deliberately.
 - **Credential rotation:** use short-lived credentials wherever possible; rotate shared secrets aggressively if you cannot avoid them yet.
-- **Registry hygiene:** review owners, scopes and last-used dates; retire dormant agents and revoke their identities.
+- **Registry hygiene:** review owners, scopes, protocol versions and last-used dates; retire dormant agents and revoke their identities.
 - **Approval policy:** define which actions need human approval, which can auto-run, and which are forbidden.
+- **Schema drift:** detect MCP tool-schema changes before a client or planner picks them up implicitly.
+- **Discovery control:** pin which public registries or discovery endpoints are reachable from production runtimes.
 - **Tracing:** propagate one trace ID across model calls, tool calls and any A2A handoffs into [P07](./07-observability-evaluation.md).
 - **Timeouts and budgets:** bound steps, total runtime, token budgets and external call counts.
 - **Patchability:** keep the sandbox runtime and base images upgradable on the same cadence as other platform components.
@@ -180,8 +204,9 @@ Operating agent systems is mostly about narrowing blast radius:
 Operational heuristics:
 
 - If an agent becomes unreliable, remove tools before you change models.
-- If operators cannot explain why a tool was called, improve the tool description and audit fields before tuning prompts.
+- If operators cannot explain why a tool was called, improve the tool description, schema and audit fields before tuning prompts.
 - If teams keep adding agent-to-agent hops, verify that they are not compensating for missing tool boundaries or ownership clarity.
+- If new MCP servers appear faster than they can be reviewed, freeze discovery and fall back to the approved catalogue.
 
 ## 7. Pitfalls
 
@@ -189,8 +214,10 @@ Operational heuristics:
 - **Letting prompts carry credentials or durable state.** That breaks rotation, audit and replay.
 - **Treating MCP as a security control by itself.** It is an interface standard, not an authorisation system.
 - **Using A2A for every internal call.** It adds protocol overhead where a queue or normal service call would do.
+- **Registering MCP servers by URL alone.** Without owner, version, scopes and review status, the registry becomes a bookmark list, not a control plane.
 - **Skipping human approval for side effects.** Fast automation is still risk if the target system changes state.
 - **Relying on the framework's defaults for retry or fallback behaviour.** Those policies belong in [P02](./02-ai-gateway-routing.md).
+- **Allowing live production discovery from public registries.** It widens supply-chain and authorisation risk far faster than most teams can review.
 - **Sharing one service account across agents.** Audit logs then cannot say which agent acted or for whom.
 - **Approvals that approve a category, not an action.** Approve the exact arguments, with an expiry.
 - **Assuming sandboxing solves prompt injection.** The primary defences still live in [P09](./09-security-safety.md).
@@ -203,6 +230,7 @@ Operational heuristics:
 - [ ] MCP used for new tool integrations unless there is a strong reason not to
 - [ ] Read-only and write-capable tools split by credential and endpoint
 - [ ] Tool allow-list and audit logging in place
+- [ ] Approved catalogue record exists for each production agent or MCP server
 - [ ] At least one human approval checkpoint for side-effecting workflows
 - [ ] Each agent has its own identity, not a shared key
 
@@ -214,7 +242,7 @@ Operational heuristics:
 - [ ] Per-tool quotas, timeouts and retry policies documented
 - [ ] Tool owners, lifecycle and deprecation process defined
 - [ ] Prompt-injection and data-exfiltration controls linked from [P09](./09-security-safety.md)
-- [ ] Agent and MCP registry with owner, version, risk tier and scopes
+- [ ] Agent and MCP registry with owner, version, protocol version, risk tier and scopes
 - [ ] Run traces and trajectories exported to [P07](./07-observability-evaluation.md) and [P08](./08-evaluation-quality.md)
 
 ### Enterprise
@@ -224,6 +252,7 @@ Operational heuristics:
 - [ ] Delegated user authority via token exchange, with the acting agent recorded
 - [ ] Approval tiers mapped to risk, with expiry and recorded approver
 - [ ] Registry reconciled against deployed agents; unregistered agents blocked
+- [ ] Public-registry intake or mirroring process reviewed and documented
 - [ ] Agent action approvals mapped to business risk levels
 - [ ] Sandboxing and base images patched through the same release process as the rest of the platform
 - [ ] Multi-tenant agent isolation requirements explicitly tested
@@ -231,21 +260,30 @@ Operational heuristics:
 
 ## 9. Sources
 
-Primary upstreams:
+Primary upstreams to re-check:
 
 - [Model Context Protocol site](https://modelcontextprotocol.io/)
 - [MCP specification repository](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [A2A repository](https://github.com/a2aproject/A2A)
 - [LangGraph repository](https://github.com/langchain-ai/langgraph)
+- [CrewAI repository](https://github.com/crewAIInc/crewAI)
+- [OpenAI Agents SDK repository](https://github.com/openai/openai-agents-python)
+- [Google ADK repository](https://github.com/google/adk-python)
+- [Microsoft Agent Framework repository](https://github.com/microsoft/agent-framework)
+- [Pydantic AI repository](https://github.com/pydantic/pydantic-ai)
+- [Letta repository](https://github.com/letta-ai/letta)
+- [AutoGen repository](https://github.com/microsoft/autogen) and [`LICENSE-CODE`](https://github.com/microsoft/autogen/blob/main/LICENSE-CODE)
 - [kagent repository](https://github.com/kagent-dev/kagent)
-- [CrewAI](https://github.com/crewAIInc/crewAI), [OpenAI Agents SDK](https://github.com/openai/openai-agents-python), [Google ADK](https://github.com/google/adk-python), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) and [AutoGen](https://github.com/microsoft/autogen)
-- [agentgateway](https://github.com/agentgateway/agentgateway) and [IBM ContextForge](https://github.com/IBM/mcp-context-forge)
-- [SPIRE](https://github.com/spiffe/spire) and [SPIFFE](https://spiffe.io/); [RFC 8693 OAuth 2.0 Token Exchange](https://www.rfc-editor.org/rfc/rfc8693)
-- [agentregistry](https://github.com/agentregistry-dev/agentregistry) and [MCP Registry](https://github.com/modelcontextprotocol/registry)
+- [agentgateway repository](https://github.com/agentgateway/agentgateway)
+- [IBM ContextForge repository](https://github.com/IBM/mcp-context-forge)
+- [agentregistry repository](https://github.com/agentregistry-dev/agentregistry)
+- [Official MCP Registry repository](https://github.com/modelcontextprotocol/registry)
+- [SPIRE repository](https://github.com/spiffe/spire) and [SPIFFE](https://spiffe.io/)
+- [RFC 8693 OAuth 2.0 Token Exchange](https://www.rfc-editor.org/rfc/rfc8693)
 - [gVisor repository](https://github.com/google/gvisor)
 - [Kata Containers repository](https://github.com/kata-containers/kata-containers)
 - [kubernetes-sigs/agent-sandbox repository](https://github.com/kubernetes-sigs/agent-sandbox)
 - [Kubernetes AI Conformance checklist](https://github.com/cncf/k8s-ai-conformance/blob/main/docs/AIConformance-1.37.yaml)
 - [Cloud Native AI whitepaper](https://github.com/cncf/tag-runtime/blob/main/wgs/cnai/whitepapers/cloudnativeai.md)
 
-Licences and stars were **Opened** on 2026-10-11; foundation status is **Search-cited**. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+The original table facts were read on 2026-10-11 (**Opened**). Added rows and status corrections for Pydantic AI, agentregistry, the official MCP Registry, ContextForge and AutoGen licence details were spot-checked on 2026-10-17 (**Opened**). Foundation status remains **Search-cited** where noted. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).

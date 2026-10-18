@@ -78,7 +78,7 @@ smoke_test() {
   local port key
   port="$(env_val GATEWAY_PORT)"; key="$(env_val LITELLM_MASTER_KEY)"
   curl -fsS "http://localhost:${port}/v1/chat/completions" \
-    -H "Authorization: Bearer $key" -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${key}" -H "Content-Type: application/json" \
     -d '{"model":"chat","messages":[{"role":"user","content":"Say hello in five words."}]}'
   echo
 }

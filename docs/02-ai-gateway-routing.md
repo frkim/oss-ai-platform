@@ -48,34 +48,47 @@ Litmus tests: "who may spend how much, with which logical key?" and "which model
 
 ## 3. Tool comparison
 
-Licence labels, stars (rounded) and repository status were read from GitHub on 2026-10-11 (**Opened**: repository metadata and `LICENSE` files). Rename and "choose when" notes are editorial. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before adoption.
+Licence labels, stars (rounded) and repository status were read from GitHub on 2026-10-11 unless stated otherwise; Helicone AI Gateway and TensorZero were spot-checked again on 2026-10-17 (**Opened**). Rename and "choose when" notes are editorial. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh) before adoption.
 
-| Tool | Licence label | Steward | Default pick? | Alternatives | Choose X when... |
-|------|---------------|---------|---------------|--------------|------------------|
-| **LiteLLM** (~60.9k★) | Open-core ⚠️ (MIT outside `enterprise/`; `enterprise/` needs a commercial subscription) | BerriAI | **Default** | Agent Router; Portkey Gateway; Kong Gateway core | Choose LiteLLM when one component should own virtual keys, per-tenant quotas, model aliases, cost attribution and simple routing (weights, fallbacks, retries) across many upstream APIs or self-hosted endpoints. Check that the gated `enterprise/` features (for example SSO and some audit and team-budget controls - **Unverified**, confirm in the enterprise `LICENSE.md`) are not on your must-have list. |
-| **Agent Router** (formerly Envoy AI Gateway; ~2.2k★) | OSI ✅ Apache-2.0 | Agent Router project (`theagentrouter`; `envoyproxy/ai-gateway` redirects) | Alternative (Kubernetes-native) | LiteLLM; kgateway; Kong Gateway core | Choose Agent Router when you want a Kubernetes- and Gateway API-centric front door on Envoy and declarative traffic policy is a first-class concern. It fits when gateway and serving estate are separate layers. The rename is **Opened** ([Methodology §4.3](./00-methodology.md#43-why-live-verification-matters-two-examples)). |
-| **kgateway** (~5.7k★) | OSI ✅ Apache-2.0 | kgateway project (formerly Gloo) | Alternative | Agent Router; agentgateway | Choose kgateway for a Gateway API implementation on Envoy with AI extensions (prompt guards, provider routing) and, later, the Gateway API Inference Extension (**Unverified**, check conformance). CNCF level is sandbox (landscape file, 2026-10-11). |
-| **agentgateway** (~5.3k★) | OSI ✅ Apache-2.0 | agentgateway project | Alternative | kgateway; Agent Router | Choose agentgateway when MCP and agent-to-agent (A2A) traffic must be governed alongside LLM calls; it is a Rust data plane that also serves LLM traffic. See [P06](./06-agents-mcp.md). |
-| **vLLM Semantic Router** (~6.1k★) | OSI ✅ Apache-2.0 | vLLM project | Alternative (complement) | LiteLLM routing; Agent Router | Choose it when the route should depend on request content (intent, complexity, safety class) rather than headers. Treat classifier quality as something to evaluate with [P08](./08-evaluation-quality.md). |
-| **Kong Gateway core** (~44.3k★) | OSI ✅ Apache-2.0 | Kong Inc. | Alternative | LiteLLM; Agent Router; Apache APISIX | Choose Kong when the platform already standardises on Kong for north-south traffic and needs classic path, header or weighted routing. Treat AI-specific extras as a separate product decision. Kong's OSS binary and image publishing policy has changed - **Unverified**; confirm what you can deploy without a licence. |
-| **Apache APISIX** (~17.2k★) | OSI ✅ Apache-2.0 | Apache Software Foundation | Alternative | Kong Gateway core; Higress | Choose APISIX for an ASF-governed, plugin-rich gateway with AI proxy and rate-limit plugins and no vendor-gated tier. |
-| **Higress** (~9.5k★) | OSI ✅ Apache-2.0 | Alibaba / Higress community | Alternative | APISIX; Agent Router | Choose Higress when you are Istio/Envoy-based and want an AI-native gateway with a strong China-region provider catalogue; documentation is mainly Chinese-first - **Unverified**. |
-| **Portkey Gateway** (~13.2k★) | OSI ✅ MIT | Portkey AI | Alternative | LiteLLM | Choose Portkey's open gateway for a lightweight, fast routing and guardrail proxy. Last push was 2026-05-25, so check maintenance; fuller governance is in the commercial platform - **Unverified**. |
-| **Build your own thin proxy** | OSI ✅ (your code) | Your team | Last resort | LiteLLM; Agent Router | Choose a custom proxy only for genuinely narrow needs: one provider, one auth method, no delegated budgets. Most teams regret this by the second tenant. |
+Comparison criteria for this pillar, in order:
+
+1. **Tenant governance depth.** Virtual keys, per-tenant budgets, RPM and TPM limits, model aliases and spend attribution.
+2. **Policy model.** Whether routing, fallbacks, allow-lists and rollout weights are easy to review, test and version.
+3. **Interoperability.** OpenAI-compatible northbound API, streaming behaviour, and where relevant Gateway API, Envoy, MCP or A2A support.
+4. **Operational fit.** HA story, dependency footprint, and whether the gateway becomes the team's only policy choke point.
+5. **Licence boundary.** This repository prefers OSI defaults when the feature gap is acceptable.
+
+| Tool | Licence label | Steward | Best at | Key trade-offs | Choose X when... | Do not choose X when... |
+|------|---------------|---------|---------|----------------|------------------|-------------------------|
+| **LiteLLM** (~61.4k★) | Open-core ⚠️ (MIT outside `enterprise/`; `enterprise/` requires a commercial subscription for production use) | BerriAI | **Default** for virtual keys, aliases, per-tenant budgets and broad provider abstraction | Strong application-level governance surface, but the open-core boundary matters and policy is less Gateway API-native than Envoy-based options | one component should own virtual keys, spend ceilings, model aliases, basic retries and fallbacks, and cost attribution from day one | you have a strict OSI-only policy, or Gateway API and Envoy CRDs must be the source of truth for routing |
+| **Agent Router** (formerly Envoy AI Gateway; ~2.2k★) | OSI ✅ Apache-2.0 | Agent Router project (`theagentrouter`; `envoyproxy/ai-gateway` redirects) | Gateway API- and Envoy-centric AI ingress | Clean OSS boundary and strong Envoy fit, but thinner tenant-budget and virtual-key administration than LiteLLM | platform teams already operate Envoy Gateway and want declarative traffic policy, GitOps and a clean path to the Gateway API Inference Extension | the first pain point is delegated quota and budget governance rather than ingress policy |
+| **kgateway** (~5.7k★) | OSI ✅ Apache-2.0 | kgateway project (formerly Gloo) | Gateway API implementation with AI extensions on Envoy | Good fit for Gateway API users, but spend tooling is thin and AI-specific ergonomics are younger than classic API gateways | you already standardise on kgateway or want Gateway API plus AI policy extensions in one control plane | you would be adopting it only to issue keys, budgets and model aliases |
+| **agentgateway** (~5.3k★) | OSI ✅ Apache-2.0 | agentgateway project | Governing MCP, A2A and LLM traffic with one data plane | Stronger agent-protocol story than most gateways, but extra concepts if you only need plain LLM proxying | MCP or A2A traffic must be governed alongside OpenAI-style calls; see [P06](./06-agents-mcp.md) | agent protocols are out of scope and you want the simplest possible LLM gateway |
+| **vLLM Semantic Router** (~6.1k★) | OSI ✅ Apache-2.0 | vLLM project | Semantic or complexity routing across backends | Classifier quality becomes part of system correctness; it complements rather than replaces the gateway | route choice depends on prompt class, complexity or policy labels inferred from content | you need deterministic, easily auditable routing based only on tenant, header or route class |
+| **Apache APISIX** (~17.2k★) | OSI ✅ Apache-2.0 | Apache Software Foundation | Classic API-gateway controls with OSS licensing and AI plugins | Mature gateway core, but AI-specific tenancy and budget features are less opinionated than LiteLLM | you already trust APISIX for north-south traffic and want AI proxying without vendor-gated tiers | you need AI-native virtual-key, alias and budget workflows out of the box |
+| **Kong Gateway core** (~44.3k★) | OSI ✅ Apache-2.0 | Kong Inc. | Classic API-gateway estate reuse | Operationally familiar in Kong shops, but AI-specific extras are a separate product decision and the OSS binary and image policy should be re-checked | the platform already standardises on Kong and wants weighted, header or path routing for AI endpoints too | you are choosing a gateway mainly for OSS AI governance features |
+| **Higress** (~9.5k★) | OSI ✅ Apache-2.0 | Alibaba / Higress community | Istio- and Envoy-heavy estates with AI gateway features | Good regional provider coverage, but docs are still China-first and evaluation outside that ecosystem takes more effort | you are already Istio and Envoy based and want AI-native plugins close to that stack | your team needs English-first docs and a globally familiar operator community |
+| **Portkey Gateway** (~13.2k★) | OSI ✅ MIT | Portkey AI | Lightweight routing proxy with a commercial upgrade path | Easy to start, but OSS governance depth is lighter than LiteLLM and long-term feature direction follows the commercial platform | you mainly need provider abstraction, simple routing and guardrail hooks, not deep delegated governance | the open-source gateway must stand alone for budgets, audit and tenant administration |
+| **Helicone AI Gateway** (~0.6k★; spot-checked 2026-10-17, **Opened**) | OSI ✅ GPL-3.0 | Helicone | Lightweight Rust gateway with built-in caching and observability hooks | Young project, copyleft licence, and the operating model leans towards Helicone's wider platform | you want a fast self-hostable proxy, accept GPL-3.0 obligations and value close coupling to observability and caching | corporate licence policy excludes GPL, or you need mature delegated budgets and tenancy controls |
+| **Build your own thin proxy** | OSI ✅ (your code) | Your team | Extremely narrow cases | Lowest feature depth and highest long-term ownership cost | you truly have one provider, one auth path and no delegated budgets or rollout policy | you expect multiple tenants, burst paths, quotas, audits or fallbacks within the next year |
+
+Not shortlisted despite conceptual fit: **TensorZero** (~11.7k★) combines gateway, observability, evaluation and optimisation, but its repository was archived on 2026-10-17 (**Opened**), so it is not a recommended default or alternative at this snapshot.
 
 The inference-aware components (Gateway API Inference Extension, llm-d) are compared in [P03](./03-model-serving.md#5-inference-aware-routing-and-scheduling), not here.
 
 ### 3.1 Why one default, and why LiteLLM
 
-The three realistic families are LiteLLM (application-level proxy), Envoy-based Gateway API gateways (Agent Router, kgateway) and agent-focused data planes (agentgateway).
+The realistic families are LiteLLM-style application gateways, Envoy-based Gateway API gateways (Agent Router, kgateway) and protocol-aware data planes such as agentgateway.
 
-- An open-source AI platform needs virtual keys, spend attribution, aliases and basic fallbacks long before it needs sophisticated traffic engineering. LiteLLM has the most direct virtual-key and budget model and the widest provider coverage (editorial judgement; it is also the most adopted row above).
-- Envoy-based gateways express routing as Kubernetes objects (`HTTPRoute`, policies), which suits GitOps and the Inference Extension, but their per-tenant budget tooling is thinner (**Unverified**, assess in evaluation).
-- agentgateway is the pick when agent and MCP governance, not LLM routing, drives the decision.
+- LiteLLM wins the **first-rollout default** on criterion 1: an open-source AI platform usually needs virtual keys, spend attribution, aliases and bounded fallback ladders before it needs sophisticated traffic engineering.
+- Envoy-based gateways express routing as Kubernetes objects (`HTTPRoute`, policies), which suits GitOps and the Inference Extension, but their per-tenant budget tooling is still thinner (**Unverified**, confirm during evaluation).
+- agentgateway is the pick when agent and MCP governance, not LLM-only routing, drives the decision.
 
-Trade-off: LiteLLM is `Open-core`, which the methodology tolerates only where the open part covers the use case. If a strict OSI-only policy applies, pick Agent Router or APISIX and accept thinner budget tooling. Revisit the default when you move to Gateway API-managed fleets: a common end state is an Envoy-based gateway at the edge with LiteLLM (or equivalent) behind it for keys and budgets, with the boundary written down so only one system owns each topic.
+Trade-off: LiteLLM is `Open-core`, which the methodology tolerates only where the open part covers the use case. Do not choose LiteLLM if a strict OSI-only policy, or a Gateway API-native control plane, is non-negotiable. In that case pick Agent Router, kgateway or APISIX and accept thinner budget tooling.
 
-Signals: **licence** and **adoption** are in the table; **maintenance** is healthy for every row except Portkey (the rest were pushed within about a week of the snapshot); **interoperability** means an OpenAI-compatible API and/or Gateway API; **security posture** and **operability** (Helm chart, HA) were not compared per tool - **Unverified**.
+Default here means **first platform gateway default**, not **the only edge pattern forever**. A common production end state is Envoy-based ingress at the edge with LiteLLM or similar behind it for keys and budgets, with the boundary written down so only one system owns each topic.
+
+Signals: **licence** and **adoption** are in the table; **maintenance** is healthy for every shortlisted row except Portkey and Helicone, which need re-checking closer to adoption; **interoperability** means an OpenAI-compatible API and, where relevant, Gateway API or agent-protocol support; **security posture** and **operability** (Helm chart, HA, audit depth) were not compared per tool - **Unverified**.
 
 ## 4. Reference design
 
@@ -88,10 +101,11 @@ One product may do everything in small deployments, but keep the **logical layer
 5. **Concrete backend choice.** It picks a provider endpoint or a self-hosted service from [P03](./03-model-serving.md), using health and capacity signals. For self-hosted pools it can hand replica selection to the inference-aware endpoint picker described in [P03](./03-model-serving.md#5-inference-aware-routing-and-scheduling).
 6. **Failure handling.** If the call fails or saturates, it follows a bounded retry and fallback ladder and records that fact.
 7. **Usage and decision records** flow to [P07](./07-observability-evaluation.md) and [P10](./10-governance-finops.md).
+8. **Route-control safety.** Policy changes go through pull requests, replay tests and a kill switch that can disable one provider, one model class or one tenant key in seconds.
 
 A common production pattern: primary path to a self-hosted engine, secondary path to a second cluster or region, tertiary burst path to a commercial API if tenant policy allows it.
 
-Record these outputs for every request: logical and resolved backend name, attempt number, retry reason, fallback reason, final region or cluster. That metadata explains why a request hit an expensive provider when the normal path was self-hosted.
+Record these outputs for every request: policy revision, logical and resolved backend name, attempt number, retry reason, fallback reason, and final region or cluster. That metadata explains why a request hit an expensive provider when the normal path was self-hosted.
 
 Design rules:
 
@@ -192,7 +206,11 @@ Cap attempts (for example two) and the total request deadline, not only the per-
 
 ### 5.7 Make routing observable
 
-Whichever product you choose, recover the final backend from logs or trace attributes for a request like 5.3. Log the logical model, resolved model, attempt count and fallback reason.
+Whichever product you choose, recover the final backend from logs or trace attributes for a request like 5.3. Log the logical model, resolved model, attempt count, policy revision and fallback reason.
+
+### 5.8 Rehearse streaming and policy changes
+
+Keep a small replay set of redacted requests that covers chat, embeddings, streaming, tool calls and JSON or structured-output modes. Run it against route changes in dry-run or staging before promotion; plain chat success often hides regressions in SSE framing, timeout policy or retry eligibility.
 
 ## 6. Operations
 
@@ -203,9 +221,11 @@ Operate the gateway like a shared platform API, not a disposable sidecar. Make t
 | 401/403 rates | Broken virtual keys, expired identities, mis-scoped tenants |
 | 429 rates | Real quota pressure, bad client retry loops, limits too low |
 | 5xx rates | Upstream outage, routing loop, gateway overload |
+| Policy drift | Live route config differs from Git, or UI-only edits bypass review |
 | Retry storms | More attempts than user requests after a backend starts timing out |
 | Silent fail-open | Traffic drifting to an expensive provider path with no alert |
 | Canary blindness | Weighted rollout with no quality or latency comparison |
+| Classifier drift | Semantic router sends the wrong prompt class to an expensive or low-quality backend |
 | Streaming health | Prompt first token, no buffering proxy in the path |
 | Usage ledger drift | Gateway token counts versus provider invoices or engine metrics |
 | Secret rotation | Rotating upstream keys without client-visible downtime |
@@ -214,7 +234,8 @@ Good habits:
 
 - log the **logical** and the **resolved** model name; include tenant, project and request IDs in every usage record;
 - alert on traffic share between backend classes, not only on outright failure;
-- keep a manual path to disable one tenant key without touching global traffic;
+- replay a small golden request set after every policy change, including streaming and tool-calling examples;
+- keep a manual path to disable one tenant key or one provider without touching global traffic;
 - rehearse budget exhaustion mid-month and a full preferred pool for an hour, not one minute; and
 - make `429` responses explicit and documented so client teams do not mistake them for random failure.
 
@@ -227,9 +248,12 @@ Good habits:
 - **Using physical model IDs in client code.** Model swaps become application migrations.
 - **Unlimited retries.** They amplify outages and turn a slow model into a platform incident.
 - **Routing on one metric only.** Lowest latency is not enough if quality, queue depth or data boundary matter.
+- **Letting route policy live only in a UI.** If you cannot diff and review it, you cannot audit it.
+- **Treating semantic routing as ground truth.** Misclassification can quietly increase cost or lower quality; keep a deterministic escape hatch.
 - **Canarying without evals.** Weighted shifting proves availability only; pair it with [P08](./08-evaluation-quality.md).
 - **Treating provider fallback as free.** The burst path may become the steady path and break cost assumptions.
 - **Breaking streaming with an intermediate proxy.** Buffered responses hide backpressure.
+- **Retrying non-idempotent or long-lived operations blindly.** Tool-calling, batch APIs and long streams need tighter retry rules than plain chat.
 - **Assuming quota equals capacity management.** Quotas protect spend; autoscaling and queues live in [P11](./11-reliability-capacity.md).
 - **Expecting routing to fix bad serving.** If every candidate is cold or overloaded, [P03](./03-model-serving.md) must change.
 
@@ -250,6 +274,7 @@ Good habits:
 - [ ] Monthly or weekly budget ceilings exist per tenant or cost centre.
 - [ ] Gateway logs, metrics and route decisions feed [P07](./07-observability-evaluation.md) dashboards.
 - [ ] Logical model aliases and route classes are versioned and change-controlled (GitOps).
+- [ ] Policy changes are tested against a replay set that includes streaming and tool-calling requests.
 - [ ] Health-aware routing exists between at least two backend classes, with distinct alerts and cost visibility for the burst path.
 - [ ] Serving-health signals from [P03](./03-model-serving.md) inform backend choice where it matters.
 
@@ -259,6 +284,7 @@ Good habits:
 - [ ] Business units can delegate quota administration safely.
 - [ ] Routing policies encode data boundary or residency constraints; multiple clusters or regions act as explicit fallback tiers.
 - [ ] Budget breach events page humans or trigger workflow in [P10](./10-governance-finops.md); provider burst paths are budgeted and approved.
+- [ ] Global kill switches can disable one provider, one model class or one tenant without full gateway downtime.
 - [ ] Key rotation and tenant suspension are tested without platform downtime.
 - [ ] Policy changes need peer review and leave an audit trail supporting compliance and chargeback.
 
@@ -277,5 +303,7 @@ Opened earlier in this repository's research process; re-check before adoption:
 - [Apache APISIX repository](https://github.com/apache/apisix)
 - [Higress repository](https://github.com/higress-group/higress)
 - [Portkey Gateway repository](https://github.com/Portkey-AI/gateway)
+- [Helicone AI Gateway repository](https://github.com/Helicone/ai-gateway) and [`LICENSE`](https://github.com/Helicone/ai-gateway/blob/main/LICENSE)
+- [TensorZero repository](https://github.com/tensorzero/tensorzero)
 - [Methodology](./00-methodology.md)
 - [Glossary](./16-glossary.md)

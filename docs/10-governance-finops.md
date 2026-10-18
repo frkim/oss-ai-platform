@@ -40,26 +40,30 @@ It does **not** own gateway quotas, token limits or model-cost routing; those be
 | Unit economics | Cost per 1M tokens, per request, per GPU-hour and per successful task are tracked per team and model | OpenCost joined with gateway usage records ([P02](./02-ai-gateway-routing.md), [P07](./07-observability-evaluation.md)) | Use a common schema such as FinOps FOCUS for billing exports |
 | Budgets and chargeback | Each team has a budget, alert thresholds and an agreed showback or chargeback model | Budget records in Git, enforced by gateway virtual keys | Enforcement is in [P02](./02-ai-gateway-routing.md); the policy and approval process live here |
 | GPU utilisation and waste | Idle, fragmented or oversized GPU allocations are visible and reviewed | DCGM Exporter metrics with OpenCost allocation | Scheduling and quota mechanics belong to [P11](./11-reliability-capacity.md) |
-| Control mapping | Controls map to internal policy and external frameworks with named owners and exceptions | NIST AI RMF as the organising taxonomy, OSCAL for machine-readable controls | Regulatory interpretation is legal work, not platform engineering |
+| Control mapping | Controls map to internal policy and external frameworks with named owners and exceptions | NIST AI RMF 1.0 + NIST AI 600-1 as the organising taxonomy, OSCAL for machine-readable controls | Regulatory interpretation is legal work, not platform engineering |
 
 ## 3. Tool comparison table
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when… |
-|------------|--------------|---------------|---------|------------------|--------------------------|
-| Kubernetes admission and drift policy | **Kyverno** | OSI (`Apache-2.0`) | Kyverno project | OPA + Gatekeeper (`Apache-2.0`), ValidatingAdmissionPolicy (built into Kubernetes), custom admission webhooks | you want Kubernetes-native policy written mostly as YAML plus built-in background audit |
-| Shared policy engine | **OPA** | OSI (`Apache-2.0`) | OPA maintainers (CNCF graduated) | Cedar (`Apache-2.0`, application authorisation), Gatekeeper (`Apache-2.0`), application-local checks | the same policy language must serve CI, admission, APIs and custom services |
-| Kubernetes integration for OPA | **Gatekeeper** | OSI (`Apache-2.0`) | Gatekeeper maintainers | Kyverno (`Apache-2.0`), validating webhooks | you already use Rego heavily and want constraint templates at admission time |
-| Model registry and lineage | **MLflow** | OSI (`Apache-2.0`) | MLflow maintainers (Linux Foundation) | artifact repositories, serving-stack registries | you need one place for experiments, model versions, lineage and promotion state |
-| AI-BOM schema | **CycloneDX ML-BOM** | OSI (`Apache-2.0` spec; **Unverified** for tooling) | CycloneDX community (OWASP; Ecma International ECMA-424) | SPDX 3 AI profile, internal evidence schemas | you want a BOM shape that fits existing CycloneDX tooling and vulnerability workflows |
-| Lineage events | **OpenLineage** | OSI (`Apache-2.0`; **Unverified**) | LF AI & Data | MLflow lineage, vendor catalogues | jobs span several schedulers and you want one open event format |
-| Vulnerability finding management | **DefectDojo** | OSI (`BSD-3-Clause`; **Unverified**) | OWASP / DefectDojo Inc. | spreadsheets and ticket queues, scanner-native dashboards | many scanners feed one triage workflow with SLAs |
-| Control catalogue format | **OSCAL** | Public-domain NIST specification (**Unverified**) | NIST | internal spreadsheets, GRC SaaS (`Not OSS`) | you want controls, profiles and assessment results as code |
-| Cost allocation | **OpenCost** | OSI (`Apache-2.0`) | OpenCost project (CNCF incubating) | Kubecost (`Open-core`: IBM-owned, commercial self-hosted tier under IBM licence terms; **Unverified** free-tier terms), cloud billing exports (`Not OSS`), bespoke cost scripts | you need Kubernetes cost by namespace, label or team without waiting for monthly invoices |
+Defaults here were weighted towards licence clarity, GitOps-friendliness, interoperability with Kubernetes and the ability to join technical evidence back to named owners, approvals and costs.
+
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when… | Do not choose the default when… |
+|------------|--------------|---------------|---------|------------------|---------------|--------------------------|---------------------------------|
+| Kubernetes admission and drift policy | **Kyverno** | OSI (`Apache-2.0`) | Kyverno project | OPA + Gatekeeper (`Apache-2.0`), `ValidatingAdmissionPolicy`, custom admission webhooks | low-ceremony YAML policies and background audit, but less reusable outside Kubernetes than Rego | you want Kubernetes-native policy written mostly as YAML plus built-in background audit | one policy language must span admission, CI, APIs and non-Kubernetes systems, where OPA may be a better anchor |
+| Shared policy engine | **OPA** | OSI (`Apache-2.0`) | OPA maintainers (CNCF graduated) | Cedar (`Apache-2.0`, application authorisation), Gatekeeper (`Apache-2.0`), application-local checks | highest reuse across systems, but Rego has a steeper learning curve than product-specific policy DSLs | the same policy language must serve CI, admission, APIs and custom services | policies stay inside one application or one cluster and a lighter engine would be simpler to own |
+| Kubernetes integration for OPA | **Gatekeeper** | OSI (`Apache-2.0`) | Gatekeeper maintainers | Kyverno (`Apache-2.0`), validating webhooks | ideal for Rego-centric shops, but more verbose than Kyverno for common Kubernetes controls | you already use Rego heavily and want constraint templates at admission time | you want fast adoption by platform engineers who prefer Kubernetes-shaped YAML over Rego templates |
+| Model registry and lineage | **MLflow** | OSI (`Apache-2.0`) | MLflow maintainers (Linux Foundation) | artifact repositories, serving-stack registries | broadest open registry lineage path, but not a complete governance system by itself | you need one place for experiments, model versions, lineage and promotion state | the estate has no MLflow users and you only need immutable artifact promotion with minimal metadata |
+| AI-BOM schema | **CycloneDX ML-BOM** | OSI (`Apache-2.0` spec; **Unverified** for tooling) | CycloneDX community (OWASP; Ecma International ECMA-424) | SPDX 3 AI profile, internal evidence schemas | best fit for teams already using CycloneDX/VEX, but SPDX may align better with software-licensing workflows | you want a BOM shape that fits existing CycloneDX tooling, SBOM pipelines and vulnerability workflows | legal, procurement or existing package-compliance tooling already standardise on SPDX as the primary artefact |
+| Lineage events | **OpenLineage** | OSI (`Apache-2.0`) | OpenLineage community | MLflow lineage, vendor catalogues | open cross-scheduler lineage, but it adds another event stream to operate and reconcile | jobs span several schedulers and you want one open event format | all lineage stays inside one orchestrator or registry that already gives enough history |
+| Vulnerability finding management | **DefectDojo** | OSI (`BSD-3-Clause`; **Unverified**) | OWASP / DefectDojo Inc. | spreadsheets and ticket queues, scanner-native dashboards | strong central triage, but another product to administer and keep in sync with scanners | many scanners feed one triage workflow with owners and SLAs | scanner-native dashboards already satisfy teams and central deduplication is not worth the overhead |
+| Control catalogue format | **OSCAL** | Public-domain NIST specification | NIST | internal spreadsheets, GRC SaaS (`Not OSS`) | machine-readable controls and assessment results, but more structure than many teams need at first | you want controls, profiles and assessment results as code | the programme is still agreeing on a basic control vocabulary and would drown in schema work too early |
+| Cost allocation | **OpenCost** | OSI (`Apache-2.0`) | OpenCost project (CNCF incubating) | Kubecost (`Open-core` / `Source-available` mix; verify current terms), cloud billing exports (`Not OSS`), bespoke cost scripts | transparent Kubernetes cost model, but fewer polished executive workflows than Kubecost or finance tools | you need Kubernetes cost by namespace, label or team without waiting for monthly invoices | you mainly need polished finance workflows, SaaS connectors and executive reporting rather than raw open allocation data |
 
 Notes:
 
 - Framework texts such as the NIST AI RMF, ISO/IEC 42001 and the EU AI Act are control references, not deployable software.
-- Tools added without re-reading their licence files (OpenLineage, DefectDojo, OSCAL, Cedar, Kubecost terms) are marked **Unverified**.
+- Cedar is strong for embedded application authorisation, but it is not a drop-in replacement for OPA, Kyverno or Gatekeeper as a cluster-governance engine.
+- Pick **one primary evidence schema** first (CycloneDX *or* SPDX) and only emit both when a clear downstream consumer needs them.
+- Tools added without re-reading their licence files (DefectDojo, Kubecost terms) are marked **Unverified**.
 - Standards, maturity and stewardship can change. Re-check any decision-critical claim with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
 ## 4. Reference design
@@ -132,12 +136,14 @@ Implementation sequence:
 
 Regulatory note: the EU AI Act, the NIST AI RMF and ISO/IEC 42001 are useful organising frames, but this document is orientation only. Use counsel and the official texts before making a compliance claim.
 
-EU AI Act dates (search-cited, secondary sources; verify against EUR-Lex):
+EU AI Act dates (mostly **Search-cited** outside GitHub; verify against EUR-Lex and the Commission service desk):
 
+- 1 Aug 2024: Regulation (EU) 2024/1689 entered into force.
 - 2 Feb 2025: prohibited practices and AI literacy apply.
 - 2 Aug 2025: general-purpose AI model obligations, governance and penalties apply.
-- The Digital Omnibus on AI (Regulation (EU) 2026/1744, published 24 Jul 2026) moved high-risk obligations from 2 Aug 2026 to **2 Dec 2027** (Annex III stand-alone systems) and **2 Aug 2028** (Annex I product-embedded systems). Article 50 transparency duties keep their original schedule, with a short grace period for marking until 2 Dec 2026 (**Unverified**).
-- Other frames: NIST AI RMF 1.0 with the Generative AI Profile (NIST AI 600-1); ISO/IEC 42001:2023 is a certifiable AI management-system standard. Map OWASP LLM Top 10 (2025) and agentic risks through [Security and safety](./09-security-safety.md).
+- 2 Aug 2026: most remaining general obligations, including transparency duties, apply.
+- The 2026 Digital Omnibus on AI moved high-risk obligations to **2 Dec 2027** (Annex III stand-alone systems) and **2 Aug 2028** (Annex I product-embedded systems). Treat those dates as search-cited until you re-open the Official Journal text at adoption time.
+- Other frames: **NIST AI RMF 1.0** plus the **final NIST AI 600-1 Generative AI Profile** (published July 2024); **ISO/IEC 42001:2023** is the current certifiable AI-management-system standard, with **EN ISO/IEC 42001:2026** as the European adoption. Map OWASP LLM Top 10 (2026) and agentic risks through [Security and safety](./09-security-safety.md).
 
 ## 6. Operations
 
@@ -187,6 +193,7 @@ Useful standing reports include:
 
 - [ ] Run policy checks in CI and again at admission time.
 - [ ] Attach SBOM or AI-BOM references to model and release records.
+- [ ] Pick one primary evidence schema (CycloneDX or SPDX) and document when, if ever, a second schema is emitted.
 - [ ] Maintain explicit exception records with owner and expiry.
 - [ ] Reconcile deployed workloads against the approved registry on a schedule.
 - [ ] Publish recurring reports for owners, policy failures and cost anomalies.
@@ -222,6 +229,8 @@ Primary references to consult when adopting this pillar:
 - [DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter)
 - [FinOps Foundation FOCUS specification](https://github.com/FinOps-Open-Cost-and-Usage-Spec/FOCUS_Spec)
 - [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
+- [NIST AI 600-1 Generative AI Profile](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)
 - [ISO/IEC 42001 overview](https://www.iso.org/standard/81230.html)
+- [EU AI Act implementation timeline](https://ai-act-service-desk.ec.europa.eu/en/ai-act/timeline/timeline-implementation-eu-ai-act)
 - [EU AI Act information portal](https://artificialintelligenceact.eu/)
 - [Methodology](./00-methodology.md) for evidence grades, the licence legend and refresh commands

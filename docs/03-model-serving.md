@@ -2,7 +2,7 @@
 
 > **TL;DR** — Model serving is the runtime layer that turns model artifacts and scarce accelerators into stable, observable inference endpoints. The best default for a Kubernetes-first platform is a serving control plane such as KServe paired with a proven engine such as vLLM, plus an inference-aware endpoint picker once you run several replicas. Policy routing, caching and artifact hardening stay in their owning pillars.
 
-*Snapshot: 2026-10-11 · Related: [AI gateway and routing](./02-ai-gateway-routing.md) · [Reliability and performance](./11-reliability-capacity.md) · [Security and safety](./09-security-safety.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./15-tool-landscape.md)*
+*Snapshot: 2026-10-11 · Related: [AI gateway and routing](./02-ai-gateway-routing.md) · [Reliability, performance and capacity](./11-reliability-capacity.md) · [Security and safety](./09-security-safety.md) · [Foundation and delivery](./12-foundation-infrastructure.md) · [Tool landscape](./15-tool-landscape.md)*
 
 ## 1. Why it matters
 
@@ -20,7 +20,7 @@ This pillar owns the parts that actually run inference:
 This pillar does **not** own:
 
 - **policy routing, retries, fallbacks and canaries across backends** → [P02 AI gateway and routing](./02-ai-gateway-routing.md);
-- **caching and hedging** → [P11 Reliability and performance](./11-reliability-capacity.md);
+- **caching and hedging** → [P11 Reliability, performance and capacity](./11-reliability-capacity.md);
 - **artifact signing, tenant isolation and SBOM policy** → [P09 Security and safety](./09-security-safety.md).
 
 ## 2. Capability map
@@ -38,19 +38,31 @@ This pillar does **not** own:
 
 ## 3. Tool comparison
 
-Licence labels, stars (rounded), archived flags and CNCF levels were read on 2026-10-11 from GitHub and the CNCF landscape file (**Opened**). Stars: vLLM ~93.5k, SGLang ~37.0k, TGI ~10.9k, Dynamo ~8.3k, TensorRT-LLM ~14.8k, LMDeploy ~8.1k, llama.cpp ~130.8k, Ollama ~182.7k, KServe ~6.1k, llm-d ~4.8k, KAITO ~1.0k, Ray ~44.0k. "Choose when" guidance is editorial; no benchmarks are claimed. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+Licence labels, stars (rounded), archived flags and notable status notes were read from GitHub on 2026-10-11 unless a row says otherwise; Triton, BentoML, OpenLLM, Seldon Core 2, OpenVINO Model Server, MLC-LLM and TorchServe were spot-checked again on 2026-10-17 (**Opened**). CNCF levels come from the CNCF landscape file (**Opened**). "Choose when" guidance is editorial; no benchmarks are claimed. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
-| Capability | Licence label | Steward | Default pick | Alternatives | Choose X when… |
-|------------|---------------|---------|--------------|--------------|----------------|
-| Kubernetes serving control plane | OSI ✅ Apache-2.0 | KServe community (CNCF incubating per the landscape file) | **KServe** | llm-d; KAITO; KubeRay / Ray Serve; plain Kubernetes Deployments | Choose KServe when you want a general, Kubernetes-native serving layer that can standardise rollout, autoscaling and endpoint lifecycle across more than one engine, including non-LLM models. Choose KAITO (Apache-2.0) when you want Azure-leaning, preset-driven GPU node provisioning plus model deployment; choose KubeRay and Ray Serve (Apache-2.0, Ray ~44k★) when the workload is already Ray-based or needs Python-level composition. |
-| High-throughput LLM engine | OSI ✅ Apache-2.0 | vLLM project | **vLLM** | SGLang; LMDeploy; Hugging Face TGI (maintenance mode); NVIDIA Dynamo | Choose vLLM when throughput, batching and broad ecosystem support matter more than specialised runtime semantics. It is the most balanced default for shared GPU clusters. Choose SGLang for prefix-heavy, structured or agentic workloads you have benchmarked, and LMDeploy (Apache-2.0) when its quantisation and TurboMind engine suit your models. Avoid TGI for new builds: its repository is archived. |
-| NVIDIA-optimised engine and datacentre orchestration | OSI ✅ Apache-2.0 (TensorRT-LLM: Apache-2.0 with some third-party-derived portions; Dynamo: Apache-2.0) | NVIDIA | Alternative | vLLM; SGLang; llm-d | Choose TensorRT-LLM when you run NVIDIA-only fleets and will invest in engine builds for the last increment of performance. Choose Dynamo for datacentre-scale disaggregated serving and KV-aware routing; it can run vLLM, SGLang or TensorRT-LLM backends (**Unverified**, confirm current backends). Both couple you to NVIDIA hardware and release cadence. |
-| Inference-aware cluster path | OSI ✅ Apache-2.0 | llm-d community | llm-d | KServe; Dynamo; Gateway API Inference Extension | Choose llm-d when disaggregated inference, scheduler-aware routing signals and tighter coordination between serving and routing are primary design goals rather than later optimisations. It is vLLM-based and builds on the Inference Extension and LeaderWorkerSet-style multi-node patterns (**Unverified**). |
-| Edge and local packaging | OSI ✅ MIT | Ollama | Ollama | llama.cpp | Choose Ollama when developers need a simple local or small-node packaging layer. Choose llama.cpp (MIT) when you need maximal portability and direct control over GGUF-style CPU or edge inference; Ollama is not a shared multi-tenant GPU server, so keep it out of production pools. |
+Comparison criteria for this pillar, in order:
 
-Why these defaults: KServe has the broadest lifecycle and multi-engine coverage and a CNCF home; vLLM has by far the largest engine adoption and ecosystem and is actively maintained (**maintenance** and **adoption** signals). Multi-node placement and gang scheduling for large models are covered by [P12](./12-foundation-infrastructure.md) (Kueue, and LeaderWorkerSet or Volcano where needed). Security posture and operability (Helm chart, HA) were not compared per engine — **Unverified**.
+1. **Workload shape.** Shared-GPU LLM serving, classical model serving, Python application composition or edge packaging.
+2. **Hardware fit.** NVIDIA-first, Intel-first, heterogeneous GPU fleets, or browser, mobile and CPU targets.
+3. **Operational model.** CRD-based serving control planes, Python-first runtimes, model-repository style servers, or plain Deployments.
+4. **Protocol and feature fit.** OpenAI-compatible APIs, KServe or Triton APIs, LoRA support, batching, streaming and multi-model composition.
+5. **Project health and openness.** Licence, archived status, release cadence and community depth.
 
-TGI's README states it is in maintenance mode and recommends vLLM or SGLang, and the repository is archived (**Opened**, 2026-10-11). Treat it as legacy for new deployments.
+| Capability | Default pick | Strong alternatives | Criteria that matter most | Trade-offs and when not to choose the default |
+|------------|--------------|---------------------|---------------------------|-----------------------------------------------|
+| Kubernetes serving control plane | **KServe** (~6.1k★, Apache-2.0, CNCF incubating) | Seldon Core 2 (~4.8k★, Source-available BSL 1.1; spot-checked 2026-10-17, **Opened**); plain Kubernetes Deployments | Multi-engine coverage, declarative lifecycle, canary and autoscaling support, and an OSI licence | Choose KServe when one platform should manage LLM and non-LLM endpoints declaratively. Do not choose it if every workload is a bespoke Python service, or if you deliberately accept Seldon Core 2's BSL for its pipeline-centric serving model. |
+| Python-first composition and online pipelines | **Ray Serve** (part of Ray, ~44.1k★, Apache-2.0) | KServe; BentoML | Python DAG composition, co-located online features, actor control and existing Ray adoption | Choose Ray Serve when the workload already runs on Ray or needs Python-level composition across steps. Do not choose it as the platform-wide default if most teams want simple CRDs and no Ray dependency. |
+| Shared-GPU LLM engine | **vLLM** (~94.0k★, Apache-2.0) | SGLang (~37.2k★); LMDeploy (~8.1k★); Hugging Face TGI (~10.9k★, archived and in maintenance mode) | Throughput, batching, LoRA and prefix-cache features, ecosystem breadth and client compatibility | Choose vLLM for the broadest OSS ecosystem and the best balanced shared-GPU default. Do not choose it blindly: SGLang may win on structured, prefix-heavy or agentic traces you have benchmarked, and TGI should be treated as legacy for new builds. |
+| General multi-framework inference server | **Triton Inference Server** (~11.1k★, BSD-3-Clause; spot-checked 2026-10-17, **Opened**) | TensorRT-LLM; KServe runtimes; BentoML | Need one server for TensorRT, ONNX, PyTorch, OpenVINO and ensemble pipelines across GPU, CPU and edge | Choose Triton when the platform must serve many model types or needs NVIDIA's model-repository and ensemble story. Do not choose it as the first shared LLM server if most teams only need OpenAI-compatible LLM endpoints and simpler engine ergonomics. |
+| NVIDIA-optimised engine and datacentre-scale orchestration | **TensorRT-LLM / Dynamo** (~14.8k★ / ~8.3k★, Apache-2.0) | vLLM; SGLang; llm-d | Maximum NVIDIA-only performance, engine builds, or disaggregated inference at larger scale | Choose this stack when fleets are NVIDIA-only and teams can own engine builds and CUDA-aligned release cadence. Do not choose it for heterogeneous hardware or for teams that cannot absorb vendor-specific operations. |
+| Custom AI API and LLM app packaging | **BentoML** (~8.9k★, Apache-2.0; spot-checked 2026-10-17, **Opened**) | OpenLLM (~12.6k★, Apache-2.0; spot-checked 2026-10-17, **Opened**); Ray Serve; plain FastAPI plus engine | Python business logic, queues, pipelines, multi-model APIs and a simpler app-serving workflow | Choose BentoML when the serving unit is an application or API, not only a raw model server. Choose OpenLLM when you mainly want turnkey OpenAI-compatible OSS LLM endpoints. Do not choose either as the only shared multi-tenant control plane for scarce GPU pools. |
+| Intel-oriented serving | **OpenVINO Model Server** (~0.9k★, Apache-2.0; spot-checked 2026-10-17, **Opened**) | Triton; BentoML; KServe runtime wrappers | Intel CPU, GPU or NPU targets, Windows or bare-metal support, and OpenAI-compatible plus KServe APIs | Choose OpenVINO Model Server when Intel hardware is first-class or OpenVINO-format models are the platform standard. Do not choose it if model availability in OpenVINO format, or NVIDIA-fleet tooling, is the real constraint. |
+| Inference-aware cluster path | **Gateway API Inference Extension** (~0.8k★, Apache-2.0) | llm-d (~4.8k★); NVIDIA Dynamo | Queue-, cache- or adapter-aware replica selection behind Gateway API | Choose it once several replicas of the same model exist and prefix or adapter locality matters. Do not choose it before you have measured replica-level pain; plain Services are simpler and easier to debug. |
+| Edge and local packaging | **Ollama** (~182.7k★, MIT) | llama.cpp (~130.8k★, MIT); MLC-LLM (~23.2k★, Apache-2.0; spot-checked 2026-10-17, **Opened**) | Developer convenience versus portability versus browser, mobile and on-device targets | Choose Ollama for the quickest local packaging, llama.cpp for maximal CPU and edge portability, and MLC-LLM when compiled browser or mobile deployment is the goal. Do not treat any of them as the default shared multi-tenant production GPU layer. |
+
+Why this stack defaults to **KServe + vLLM**: KServe gives the platform one Kubernetes-native contract for endpoint lifecycle, while vLLM has the healthiest engine ecosystem, strong adoption and a direct path to multi-LoRA and prefix-aware serving. If you are not Kubernetes-first, the default changes: BentoML, OpenLLM or Ray Serve can be simpler. If you are NVIDIA-only and chasing the last increment of performance, TensorRT-LLM and Triton deserve a separate benchmark track.
+
+Legacy and caution notes: **TGI** is archived and its README says it is in maintenance mode (**Opened**). **TorchServe** (~4.3k★) is archived and its README says "Limited Maintenance" (**Opened**, spot-checked 2026-10-17), so it is not shortlisted for new builds.
 
 ## 4. Reference design
 
@@ -58,7 +70,7 @@ A solid serving design usually has five parts.
 
 1. **Approved model storage.** Model weights, tokenizer files and adapters live in object storage or a registry-backed distribution path.
 2. **Serving control plane.** KServe or a similar layer creates and updates endpoints declaratively.
-3. **Inference engine pods.** vLLM, SGLang, LMDeploy, TensorRT-LLM, Dynamo or another engine loads the model and serves traffic (TGI only for existing deployments).
+3. **Inference engine pods.** vLLM, SGLang, LMDeploy, Triton, TensorRT-LLM, Dynamo, OpenVINO Model Server or an application packaging layer such as BentoML or OpenLLM loads the model and serves traffic (TGI only for existing deployments).
 4. **Accelerator-aware scheduling.** Nodes, GPU classes and autoscaling policies fit the memory and throughput profile of each endpoint.
 5. **Endpoint picker and feedback.** Health, queue depth and cache signals drive replica choice (section 5) and are exposed to the gateway in [P02](./02-ai-gateway-routing.md).
 
@@ -173,6 +185,8 @@ Serving incidents often look like routing incidents from the outside. Distinguis
 | Cold starts | Model download time, weight load time, tokenizer init time |
 | GPU saturation | Memory pressure, queue depth, degraded TTFT |
 | Fragmentation | Too many endpoints each reserving a little GPU and wasting the rest |
+| Capability drift | An "OpenAI-compatible" endpoint no longer matches the function-calling, JSON or adapter features clients expect |
+| GPU topology mismatch | Model fits in nominal VRAM but underperforms or fails because NVLink, NUMA, MIG or PCIe layout is wrong |
 | Rollout regressions | New weights or engine flags changing latency or output quality |
 | Artifact drift | One replica serving different weights or tokenizer assets from another |
 | Autoscaling lag | Traffic rising faster than warm capacity or node scale-out |
@@ -181,8 +195,10 @@ Operational habits that pay off:
 
 - benchmark with the prompt lengths and output lengths you actually expect;
 - record the exact engine image, model artifact path and runtime flags for every deployment;
+- maintain a support matrix of model family, engine, quantisation format and hardware class;
 - separate development models from shared production pools;
-- maintain at least one known-good rollback image or runtime spec; and
+- maintain at least one known-good rollback image or runtime spec;
+- soak-test upgrades with representative prompt and output length distributions; and
 - alert on queue depth, TTFT and error rate together, not on CPU alone.
 
 ## 8. Pitfalls
@@ -192,8 +208,11 @@ Operational habits that pay off:
 - **Autoscaling on the wrong signal.** CPU often says little about a saturated GPU-backed model server.
 - **Treating all GPUs as interchangeable.** Memory size, interconnect and node topology affect what can be served efficiently.
 - **Skipping artifact hygiene.** Pulling arbitrary model files may solve a demo and break your hardening story.
+- **Assuming OpenAI-compatible means behaviour-compatible.** Tool calling, JSON mode, embeddings and LoRA semantics still vary by engine.
+- **Running archived or limited-maintenance runtimes for new builds.** Treat TGI and TorchServe as migration inputs, not greenfield defaults.
 - **Expecting the router to compensate for cold or unstable runtimes.** [P02](./02-ai-gateway-routing.md) can shift traffic; it cannot fix a bad engine rollout.
 - **Letting every team pick its own runtime flags.** Shared platforms need a supported profile, not infinite per-team tuning freedom.
+- **Hiding engine choice inside an app framework until performance matters.** The convenience layer should not stop you from benchmarking the actual runtime.
 
 ## 9. Checklist
 
@@ -209,6 +228,7 @@ Operational habits that pay off:
 
 - [ ] A serving control plane such as KServe standardises endpoint lifecycle.
 - [ ] Runtime images, flags and artifact paths are versioned.
+- [ ] A support matrix exists for model family, engine, quantisation format and GPU class.
 - [ ] Autoscaling uses endpoint-relevant signals.
 - [ ] Warm-capacity policy exists for latency-sensitive endpoints.
 - [ ] Serving telemetry feeds routing decisions in [P02](./02-ai-gateway-routing.md) and dashboards in [P07](./07-observability-evaluation.md).
@@ -218,6 +238,7 @@ Operational habits that pay off:
 - [ ] Multiple model pools or clusters exist for fault domains, isolation or hardware classes.
 - [ ] Disaggregated inference and an endpoint picker (section 5) are evaluated where prefix sharing, prompt sizes and concurrency justify them.
 - [ ] Artifact promotion ties into provenance and trust controls from [P09](./09-security-safety.md).
+- [ ] GPU topology, interconnect and any MIG or sharing mode are explicit parts of placement policy.
 - [ ] GPU scheduling policy is coordinated with cluster operations from [P12](./12-foundation-infrastructure.md).
 - [ ] Engine upgrades, model swaps and rollback drills are rehearsed, not theoretical.
 
@@ -226,6 +247,13 @@ Operational habits that pay off:
 Opened earlier in this repository's research process; re-check before adoption:
 
 - [KServe repository](https://github.com/kserve/kserve)
+- [Triton Inference Server repository](https://github.com/triton-inference-server/server) and [`LICENSE`](https://github.com/triton-inference-server/server/blob/main/LICENSE)
+- [BentoML repository](https://github.com/bentoml/BentoML)
+- [OpenLLM repository](https://github.com/bentoml/OpenLLM) and [`LICENSE`](https://github.com/bentoml/OpenLLM/blob/main/LICENSE)
+- [Seldon Core repository](https://github.com/SeldonIO/seldon-core) and [`LICENSE`](https://github.com/SeldonIO/seldon-core/blob/v2/LICENSE)
+- [OpenVINO Model Server repository](https://github.com/openvinotoolkit/model_server) and [`LICENSE`](https://github.com/openvinotoolkit/model_server/blob/main/LICENSE)
+- [MLC-LLM repository](https://github.com/mlc-ai/mlc-llm) and [`LICENSE`](https://github.com/mlc-ai/mlc-llm/blob/main/LICENSE)
+- [TorchServe repository](https://github.com/pytorch/serve)
 - [vLLM repository](https://github.com/vllm-project/vllm)
 - [llm-d repository](https://github.com/llm-d/llm-d)
 - [Gateway API Inference Extension repository](https://github.com/kubernetes-sigs/gateway-api-inference-extension)

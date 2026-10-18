@@ -13,7 +13,7 @@ Classic platform security still applies, but LLM systems add new failure modes:
 - prompts, traces and chat logs become a new home for secrets and PII;
 - the platform runs unusual workloads: large third-party artifacts, GPU drivers, notebook-derived code and agent tools. Safe prompts do not help if any workload can run privileged, pull unsigned images or load an unsafe model file.
 
-Use the OWASP Top 10 for LLM Applications (2025), the OWASP Top 10 for Agentic Applications (December 2025; **Unverified** against the official text) and MITRE ATLAS as threat catalogs, not finished architectures. They help ask: who can call which model, with which data, through which tools, and what evidence survives an incident.
+Use the OWASP Top 10 for LLM Applications (2026), the OWASP Top 10 for Agentic Applications (2026; **Search-cited**) and MITRE ATLAS as threat catalogs, not finished architectures. They help ask: who can call which model, with which data, through which tools, and what evidence survives an incident.
 
 ### 1.1 Layers
 
@@ -67,43 +67,45 @@ Model registry workflow and artifact storage belong to [P04](./04-model-lifecycl
 
 ### 3.1 Layer A: AI threats and safety
 
-| Capability | Default pick | Licence label | Steward | Alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|--------------|----------------------------|
-| Guardrail orchestration | **NeMo Guardrails** | OSI (`Apache-2.0`) | NVIDIA | Guardrails AI (`Apache-2.0`), gateway hooks, app middleware | you want explicit safety flows around prompts, context, tool calls and outputs |
-| Classifiers | **Llama Guard** | `Open weights` (Llama community licence) | Meta | Prompt Guard (`Open weights`), bespoke classifiers | you want lightweight detectors combined with other controls |
-| PII detection | **Presidio** | OSI (`MIT`) | Microsoft | provider-side DLP, custom regex + validation | you need explainable detectors, structured redaction and local execution |
-| Human identity | **Keycloak** | OSI (`Apache-2.0`) | Keycloak maintainers (CNCF incubating) | existing enterprise IdP (`Not OSS`) | you need self-hosted OIDC/SAML and tenant-aware realms |
-| Fine-grained authz | **OpenFGA** | OSI (`Apache-2.0`) | OpenFGA maintainers (CNCF incubating) | coarse Keycloak roles, OPA or Cedar (`Apache-2.0`) in the app | permissions depend on relations (user, workspace, document, tool) |
-| Workload / agent identity | **SPIFFE/SPIRE** | OSI (`Apache-2.0`) | SPIFFE community (CNCF graduated) | Kubernetes service accounts, mesh-native identity | you want portable identities and mTLS across namespaces or clusters |
-| Secrets | **OpenBao + External Secrets Operator** | OSI (`MPL-2.0`) + OSI (`Apache-2.0`) | OpenBao community (Linux Foundation) + ESO maintainers | HashiCorp Vault (`Source-available`, BSL 1.1 since 2023), hand-managed `Secret` objects | you need central rotation and controlled fan-out |
-| Red teaming | **garak** | OSI (`Apache-2.0`) | NVIDIA | PyRIT (`MIT`), promptfoo (`MIT`) | you want broad probe coverage out of the box |
+Defaults here were weighted towards licence, policy depth, local execution, Kubernetes fit and maintenance signals. The trade-off column makes the editorial choice explicit.
+
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Guardrail orchestration | **NeMo Guardrails** | OSI (`Apache-2.0`) | NVIDIA | Guardrails AI (`Apache-2.0`), gateway hooks, app middleware | strongest flow orchestration, but heavier and more opinionated than in-process validation libraries | you want explicit pre-, in- and post-call safety flows around prompts, retrieved context, tool calls and outputs across several apps | you only need local schema or output validation inside one service, with no shared safety workflow |
+| Classifiers | **Llama Guard** | `Open weights` (Llama Community License) | Meta | Prompt Guard (`Open weights`), bespoke classifiers | fast and local, but narrow: classifiers surface risk signals rather than enforce policy on their own | you need a lightweight content-safety detector that sits inside a broader policy chain | you are tempted to treat a classifier as the whole prompt-injection or data-loss control |
+| PII detection | **Presidio** | OSI (`MIT`) | Microsoft | provider-side DLP, custom regex + validation | transparent and locally operable, but you own detector tuning and language coverage | you need explainable detectors, structured redaction and the option to keep PII handling entirely in-house | your provider DLP already meets residency, cost and explainability needs better than another local service |
+| Human identity | **Keycloak** | OSI (`Apache-2.0`) | Keycloak project | Authentik (`Open-core`, MIT outside `enterprise/`), Dex (`Apache-2.0`), existing enterprise IdP (`Not OSS`) | richest self-hosted IAM stack, but also the heaviest to run and upgrade | you need OIDC/SAML, self-service realms and brokered identity under your control | you only need a thin OIDC bridge to an external IdP or want a lighter GitOps-friendly issuer |
+| Fine-grained authz | **OpenFGA** | OSI (`Apache-2.0`) | OpenFGA maintainers | coarse Keycloak roles, Cedar (`Apache-2.0`), OPA (`Apache-2.0`) in the app | best fit for relationship graphs, but it introduces a dedicated authorisation service and tuple model | permissions depend on relations such as user, workspace, document, tool and delegated agent scope | one service can embed static policy with Cedar or Rego more simply than running a Zanzibar-style system |
+| Workload / agent identity | **SPIFFE/SPIRE** | OSI (`Apache-2.0`) | SPIFFE community (CNCF graduated) | Kubernetes service accounts, mesh-native identity | portable and strong, but it adds another control-plane component and certificate lifecycle | you want short-lived, portable workload identities and mTLS across namespaces or clusters | identities never leave one cluster and service accounts already meet your threat model |
+| Secrets | **OpenBao + External Secrets Operator** | OSI (`MPL-2.0`) + OSI (`Apache-2.0`) | OpenBao community + ESO maintainers | HashiCorp Vault (`Source-available`, BSL-1.1), provider-native secret injection, hand-managed `Secret` objects | strongest central control and rotation, but more moving parts than direct secret mounts | you need central rotation, audit and controlled fan-out into Kubernetes | the environment is small enough that a simpler secret path beats the operational cost of a full secret platform |
+| Red teaming | **garak** | OSI (`Apache-2.0`) | NVIDIA | PyRIT (`MIT`), promptfoo (`MIT`), Inspect AI safety tasks | broad endpoint probes with little setup, but less scenario-specific than scripted multi-step attack suites | you want recurring jailbreak, exfiltration and unsafe-output coverage with a broad default probe set | your main need is deterministic CI config or scripted multi-turn attack paths against tools and agents |
 
 - LLM Guard (`MIT`) is **archived**; do not adopt it for new work.
-- PyRIT suits multi-turn scripted attacks; promptfoo suits CI-friendly red-team configs.
+- Prompt Guard is a *classifier*, not a policy engine: use it as a pre-filter for jailbreak and indirect-injection signals, never as the only defence.
+- Development moved from `Azure/PyRIT` (archived) to `microsoft/PyRIT` (MIT, about 4.6k★, latest release `v1.1.0`; **Opened** on GitHub in this review).
 - Open weights are not open source (see the [licence legend](./00-methodology.md#32-licence-policy-and-legend)).
-- Licences and stewards for Guardrails AI, promptfoo and Cedar were not re-opened in this edit: **Unverified**.
 
 ### 3.2 Layer B: platform and supply chain
 
-| Capability | Default pick | Licence label | Steward | Alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|--------------|----------------------------|
-| Network policy | **Cilium** | OSI (`Apache-2.0`) | Cilium project | native `NetworkPolicy`, Calico (**Unverified**) | you want policy, observability and eBPF enforcement in one layer |
-| Certificates | **cert-manager** | OSI (`Apache-2.0`; **Unverified**) | cert-manager project (CNCF graduated; **Unverified**) | mesh-issued certs, cloud CAs (`Not OSS`) | you need automated X.509 for ingress and internal TLS |
-| Scanning | **Trivy** | OSI (`Apache-2.0`) | Aqua Security | Grype (`Apache-2.0`), kube-bench (**Unverified**) | one scanner for images, filesystems, IaC and cluster config; pin by digest (note below) |
-| SBOM | **Syft** | OSI (`Apache-2.0`) | Anchore | Trivy SBOM mode, build-native SBOMs | you need repeatable inventories for policy and incident response |
-| Signing and provenance | **Cosign + Sigstore** | OSI (`Apache-2.0`) | Sigstore project | GPG, Notation (**Unverified**) | you want identity-tied signatures and transparent verification |
-| Admission | **Kyverno** `verifyImages` | OSI (`Apache-2.0`) | Kyverno project | Sigstore policy-controller (**Unverified**), Ratify | you already run Kyverno for [P10](./10-governance-finops.md) policy |
-| Model provenance | **OpenSSF model-signing (OMS)** | OSI (`Apache-2.0`; **Unverified**) | OpenSSF | cosign blob signing, checksum manifests | you sign weights with the same Sigstore trust chain as images |
-| Model scanning | **ModelScan** | verify the LICENSE file | ModelScan maintainers | safetensors-only policy | you ingest third-party models or notebooks |
-| Runtime detection | **Falco** | OSI (`Apache-2.0`) | Falco project (CNCF graduated) | Tetragon (`Apache-2.0`; **Unverified**, enforcement-capable), auditd | you need syscall detections with Kubernetes context |
-| Isolation | **Kata Containers** | OSI (`Apache-2.0`) | Kata community | gVisor (`Apache-2.0`) | risky tools or untrusted tenants justify VM-grade boundaries |
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Network policy | **Cilium** | OSI (`Apache-2.0`) | Cilium project | native `NetworkPolicy`, Calico | broad eBPF feature set and observability, but more platform coupling than vanilla policy alone | you want policy, service networking and flow visibility from one layer | plain `NetworkPolicy` already meets the need and the team does not want another dataplane |
+| Certificates | **cert-manager** | OSI (`Apache-2.0`) | cert-manager project | mesh-issued certs, cloud CAs (`Not OSS`) | ubiquitous and Kubernetes-native, but one more controller to operate | you need automated X.509 for ingress, webhooks and internal TLS | certificate issuance is already fully owned by the mesh or an external PKI workflow |
+| Scanning | **Trivy** | OSI (`Apache-2.0`) | Aqua Security | Grype (`Apache-2.0`), kube-bench | one broad scanner, but the breadth comes with more tuning and supply-chain pinning discipline | you want one scanner for images, filesystems, IaC and cluster config | you prefer narrower tools with separate ownership for SBOM, CVE and benchmark checks |
+| SBOM | **Syft** | OSI (`Apache-2.0`) | Anchore | Trivy SBOM mode, build-native SBOMs | repeatable inventories, but it adds another step if your build system already emits acceptable SBOMs | you need deterministic inventories for policy, provenance and incident response | your build toolchain already emits signed SBOMs in the format you govern |
+| Signing and provenance | **Cosign + Sigstore** | OSI (`Apache-2.0`) | Sigstore project | GPG, Notation | strong identity binding and ecosystem momentum, but it changes signing workflows and trust roots | you want keyless or identity-tied signatures and transparent verification | an existing signing estate is already standardised on another trust model you cannot replace soon |
+| Admission | **Kyverno** `verifyImages` | OSI (`Apache-2.0`) | Kyverno project | Gatekeeper/OPA (`Apache-2.0`), Sigstore policy-controller, Ratify | low-ceremony Kubernetes-native policy, but less reusable outside Kubernetes than Rego-based policy | you already run Kyverno for [P10](./10-governance-finops.md) governance rules and want one admission engine | you need the same policy language across admission, CI, gateways and bespoke services, where OPA may fit better |
+| Model provenance | **OpenSSF model-signing (OMS)** | OSI (`Apache-2.0`; **Unverified**) | OpenSSF | cosign blob signing, checksum manifests | aligns model weights with the Sigstore trust chain, but the ecosystem is younger than image signing | you sign weights with the same trust chain as images and need policy-verifiable evidence | your model intake is still simple enough that checksums plus quarantine are easier to operate |
+| Model scanning | **ModelScan** | verify the `LICENSE` file | ModelScan maintainers | safetensors-only policy | catches risky artefacts, but adds a quarantine step and false-positive review | you ingest third-party models, notebooks or legacy artefacts that may hide unsafe serialisation | you already enforce `safetensors`-only intake and block everything else at source |
+| Runtime detection | **Falco** | OSI (`Apache-2.0`) | Falco project (CNCF graduated) | Tetragon (`Apache-2.0`), auditd | broader pre-built rules, but Tetragon goes deeper on eBPF-native tracing and enforcement | you need syscall detections with Kubernetes context and a mature rule ecosystem | you primarily want eBPF-native process policy and enforcement rather than Falco-style alert rules |
+| Isolation | **Kata Containers** | OSI (`Apache-2.0`) | Kata community | gVisor (`Apache-2.0`), Firecracker (`Apache-2.0`) as a microVM substrate | strongest isolation of the open options, but with higher startup and resource overhead | risky tools or untrusted tenants justify VM-grade boundaries | container isolation plus policy is enough, or ultra-low-overhead syscall filtering matters more than VM separation |
 
 Notes:
 
 - **Trivy compromise:** on 19 March 2026 its release pipeline, `trivy-action` and `setup-trivy` were compromised and malicious binaries/images published (affected versions include v0.69.4; advisory GHSA-69fq-xp46-6x23). Licence unchanged (`Apache-2.0`); Aqua reports remediation. Pin binaries, images and actions by digest or commit SHA, verify signatures and rotate CI secrets exposed to affected versions. Search-cited; confirm in the advisory.
-- gVisor suits syscall-level sandboxing without nested virtualisation; Kata suits VM-grade isolation where hardware virtualisation exists.
+- gVisor suits syscall-level sandboxing without nested virtualisation; Kata suits VM-grade isolation where hardware virtualisation exists; Firecracker is usually consumed through Kata or another microVM wrapper rather than offered directly to platform tenants.
 - `safetensors` avoids the code-execution risk of Python pickle loading and is the default exchange format.
-- SLSA and CIS benchmarks are guidance frameworks, not tools. ModelScan terms and Kata/gVisor/Cosign details were not re-checked here; verify per [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+- SLSA and CIS benchmarks are guidance frameworks, not tools. ModelScan terms and OMS details were not re-checked here; verify per [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
 
 ## 4. Reference design
 
@@ -190,11 +192,12 @@ Habits:
 - Assuming one model or regex set solves prompt injection.
 - Sending raw prompts and documents to every log sink "for debugging"; redacting outputs but not prompts, traces, eval sets or replay stores.
 - Shared administrator credentials for agent tools.
+- Re-using the same guardrail policy for human chat, background agents and tool outputs without separate trust assumptions.
 - Confusing "signed" with "safe": a signed image can still be vulnerable.
 - Unpinned scanner actions or images (see the Trivy note).
 - Loading pickle-based artifacts "because the demo needed it".
 - Privileged debug pods that become permanent back doors; GPU nodes shared across trust levels.
-- Sandboxing too little, or so much that teams disable it; blocking without a review loop so teams bypass it.
+- Sandboxing too little, or so much that teams disable it; blocking without a review loop so teams bypass it; forgetting that semantic caches and replay stores can leak one tenant's prompt or answer into another's context.
 - Treating CIS benchmarks as copy-paste settings; manual `Secret` updates at scale.
 
 ## 8. Checklist
@@ -213,6 +216,7 @@ Habits:
 - [ ] Workload and agent identity with mTLS; each agent has its own identity and owner.
 - [ ] Relationship-based authorisation for tools, documents and workspaces.
 - [ ] Block, warn and log-only policies with owner-approved defaults; rule IDs in audit logs without unnecessary raw content.
+- [ ] Caches, replay stores and prompt logs are classified as security-relevant data and isolated by tenant and retention class.
 - [ ] Signatures verified at admission; deny-by-default network policy with explicit egress.
 - [ ] SBOMs generated and attached to releases; GPU nodes dedicated; exceptions tracked and expiring.
 - [ ] Regular review of high-risk prompt and tool denials.
@@ -229,19 +233,20 @@ Habits:
 ## 9. Sources
 
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-- [OWASP Agentic AI Security Initiative](https://genai.owasp.org/initiatives/agentic-security-initiative/)
+- [OWASP Agentic AI Security Initiative](https://genai.owasp.org/initiatives/agentic-security-initiative/) and [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)
 - [MITRE ATLAS](https://atlas.mitre.org/)
 - [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails)
 - [LLM Guard](https://github.com/protectai/llm-guard) (archived)
 - [Guardrails AI](https://github.com/guardrails-ai/guardrails)
+- [Llama Guard and Prompt Guard](https://meta-llama.github.io/PurpleLlama/CyberSecEval/docs/prompt_guard/overview)
 - [Presidio](https://github.com/microsoft/presidio)
-- [Keycloak](https://www.keycloak.org/)
+- [Keycloak](https://www.keycloak.org/), [Authentik](https://github.com/goauthentik/authentik), [Dex](https://github.com/dexidp/dex)
 - [OpenFGA](https://github.com/openfga/openfga)
 - [SPIFFE and SPIRE](https://spiffe.io/)
 - [OpenBao](https://github.com/openbao/openbao)
 - [External Secrets Operator](https://external-secrets.io/)
 - [garak](https://github.com/NVIDIA/garak)
-- [PyRIT](https://github.com/Azure/PyRIT) (repository archived at snapshot; treat as legacy)
+- [PyRIT](https://github.com/microsoft/PyRIT) and [archived Azure/PyRIT repository](https://github.com/Azure/PyRIT)
 - [promptfoo](https://github.com/promptfoo/promptfoo)
 - [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 - [CIS Kubernetes Benchmarks](https://www.cisecurity.org/benchmark/kubernetes)
@@ -250,8 +255,8 @@ Habits:
 - [Falco](https://falco.org/)
 - [Trivy](https://github.com/aquasecurity/trivy) · [Grype](https://github.com/anchore/grype) · [Syft](https://github.com/anchore/syft)
 - [Cosign](https://github.com/sigstore/cosign) · [Sigstore](https://www.sigstore.dev/) · [SLSA](https://slsa.dev/)
-- [Kyverno image verification](https://kyverno.io/docs/policy-types/cluster-policy/verify-images/)
-- [Kata Containers](https://katacontainers.io/) · [gVisor](https://gvisor.dev/)
+- [Kyverno image verification](https://kyverno.io/docs/policy-types/cluster-policy/verify-images/) · [Gatekeeper](https://github.com/open-policy-agent/gatekeeper)
+- [Kata Containers](https://katacontainers.io/) · [gVisor](https://gvisor.dev/) · [Firecracker](https://github.com/firecracker-microvm/firecracker)
 - [safetensors](https://github.com/huggingface/safetensors) · [ModelScan](https://github.com/protectai/modelscan) · [OpenSSF model-signing](https://github.com/sigstore/model-transparency)
 - [NVIDIA GPU Operator](https://github.com/NVIDIA/gpu-operator)
 - [Methodology](./00-methodology.md) for licence legend, evidence grades and refresh commands

@@ -1,6 +1,6 @@
 # P08. Evaluation and quality
 
-> **TL;DR** - Treat quality as an engineering discipline with its own datasets, owners and gates. Run cheap deterministic and judge-based evals offline on every prompt, retrieval, routing, tool or model change; sample and score production traffic online; calibrate automated judges against human labels; and block releases on regression thresholds in CI. Default stack: **promptfoo** or **DeepEval** for application regression gates, **Ragas** for RAG metrics, **Inspect AI** for agent and safety evals, **lm-evaluation-harness** for model benchmarks, with traces and scores stored in an OTel-fed LLM UI from [P07](./07-observability-evaluation.md).
+> **TL;DR** - Treat quality as an engineering discipline with its own datasets, owners and gates. Run cheap deterministic and judge-based evals offline on every prompt, retrieval, routing, tool or model change; sample and score production traffic online; calibrate automated judges against human labels; and block releases on regression thresholds in CI. Default stack: **promptfoo** or **DeepEval** for application regression gates, **Ragas** for RAG metrics, **Inspect AI** for agent and safety evals, **lm-evaluation-harness** for model benchmarks, with traces, datasets and scores stored in Opik or another OTLP-fed LLM UI from [P07](./07-observability-evaluation.md).
 
 *Snapshot: 2026-10-11 · Related: [Observability](./07-observability-evaluation.md) · [Knowledge and context](./05-data-knowledge-rag.md) · [Agents, tools and protocols](./06-agents-mcp.md) · [Model lifecycle and adaptation](./04-model-lifecycle-adaptation.md) · [Security and safety](./09-security-safety.md) · [AI gateway and routing](./02-ai-gateway-routing.md)*
 
@@ -31,36 +31,51 @@ Ownership boundaries:
 | **Agent and trajectory evaluation** | Score task success, step efficiency, tool selection and arguments, safety of actions | Needs traces from P07 and a sandbox |
 | **Safety evaluation** | Jailbreak, prompt injection, data leakage, harmful content, over-refusal | Run continuously, not once before launch |
 | **Regression gates** | Fail or pause rollouts when thresholds are crossed | Applies to prompt, parser, routing, embedding and model changes |
+| **Result store and review UI** | Keep runs, datasets, traces, rubrics and adjudication decisions together | Needed for audits, incident replay and judge calibration history |
 | **Experiment design** | Shadow, canary and A/B testing with guardrail metrics | Pairs with rollout in [P04](./04-model-lifecycle-adaptation.md) |
 | **Human feedback loop** | Review queues, labels, disagreement handling, feedback into datasets | Calibration anchor for everything automated |
 | **Benchmark selection** | Public benchmarks for model comparison, kept apart from app evals | Contamination and relevance caveats |
 
 ## 3. Tool comparison
 
-Licences, stars (rounded to 0.1k), push dates and archived flags were read from upstream repositories on 2026-10-11 (**Opened**). Re-check with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh). Picks are driven by interoperability (CI-friendly, OTel/OpenAI-compatible endpoints), licence and adoption.
+The original table facts were read on 2026-10-11. This review adds missing tools and status corrections opened on 2026-10-17, especially around OpenAI Evals, Giskard and trace-linked score stores. Evidence grades follow [Methodology §4.1](./00-methodology.md#41-evidence-grades): repository pages, `LICENSE` files and release pages read on GitHub are **Opened**; anything with unclear status is called out directly.
 
-| Capability | Default pick | Licence label | Steward | Alternatives | Choose X when… |
-|------------|--------------|---------------|---------|--------------|----------------|
-| **Application and prompt regression gates** | **promptfoo** (25.9k★; active, pushed 2026-10-11) | `OSI` ✅ (MIT) | promptfoo maintainers | DeepEval (`OSI` ✅ Apache-2.0; 18.7k★; python-v4.2.4, 2026-09-22), OpenEvals (`OSI` ✅ MIT; 1.2k★, LangChain), Opik evals (`OSI` ✅ Apache-2.0; 22.5k★) | Choose **promptfoo** for declarative YAML assertions, matrix runs across models and prompts, and CI; choose **DeepEval** when tests already live in pytest and you want its metric library |
-| **RAG metrics** | **Ragas** (16.0k★; v0.4.3 January 2026, last push 2026-02-24, so slower than peers) | `OSI` ✅ (Apache-2.0) | Ragas maintainers (`vibrantlabsai/ragas`) | DeepEval RAG metrics, TruLens (`OSI` ✅ MIT; 3.6k★), Phoenix evals (`Source-available` ⚠️ Elastic-2.0; 11.8k★) | Choose **Ragas** when retrieval quality, faithfulness and context use are the main questions; fall back to DeepEval or TruLens if maintenance stalls |
-| **Agent, tool-use and safety evals** | **Inspect AI** (3.0k★; 0.3.278, 2026-10-09) | `OSI` ✅ (MIT) | UK AI Security Institute | Inspect Evals (`OSI` ✅ MIT; 0.7k★, ready-made tasks), promptfoo red-team mode, Giskard (`OSI` ✅ Apache-2.0; 5.9k★) | Choose **Inspect** for sandboxed multi-step agent tasks, tool-use scoring and a large community eval collection |
-| **Model benchmark harness** | **lm-evaluation-harness** (14.2k★; v0.4.13, 2026-08-31) | `OSI` ✅ (MIT) | EleutherAI maintainers | LightEval (`OSI` ✅ MIT; 2.6k★; last tagged release v0.13.0, 2025-11), HELM (`OSI` ✅ Apache-2.0; 2.9k★; v0.5.16, 2026-04), OpenCompass (`OSI` ✅ Apache-2.0; 7.5k★) | Choose **lm-eval-harness** for standard academic tasks against any OpenAI-compatible or local endpoint; choose **HELM** for broader holistic scenario coverage |
-| **Experiments, datasets and score storage** | **Langfuse** (35.6k★) | `Open-core` ⚠️ (MIT outside `ee/` directories) | Langfuse, now part of ClickHouse | MLflow (`OSI` ✅ Apache-2.0; 28.3k★; v3.17.0), Opik (`OSI` ✅ Apache-2.0), Phoenix (`Source-available` ⚠️ Elastic-2.0) | Choose **Langfuse** for datasets, experiment runs and trace-linked scores in one UI, if the `ee/` boundary is acceptable; choose **MLflow** or **Opik** for a pure Apache-2.0 path |
-| **Safety and red-team scanning** | **garak** (9.5k★; v0.17.0, 2026-09-09) | `OSI` ✅ (Apache-2.0) | NVIDIA | DeepTeam (`OSI` ✅ Apache-2.0; 3.0k★; last release v1.0.9, 2025-11), promptfoo red-team, Inspect safety tasks | Choose **garak** for broad vulnerability probes against a model endpoint; use **promptfoo** red-team when you want it inside the same CI runner. Policy and tooling depth: [P09](./09-security-safety.md) |
-| **Drift and data-quality monitoring** | **Evidently** (8.0k★; v0.7.23, 2026-09-11) | `OSI` ✅ (Apache-2.0) | Evidently AI | Phoenix, Langfuse online evaluators | Choose **Evidently** for report-style drift, text-quality and test-suite monitoring alongside classic ML |
+Selection criteria used in this pillar:
+
+- **CI ergonomics:** teams need something that can run cheaply on pull requests and more broadly overnight.
+- **Trace linkage:** the stronger tools attach scores back to traces and datasets instead of producing an orphaned HTML report.
+- **Stochastic-system fit:** agent evals, RAG evals and judges need repeated runs, rubrics and slice reporting, not just one pass/fail.
+- **Licence boundary:** where credible `OSI` options exist, they should be the default or the trade-off must be explicit.
+
+| Capability | Default pick | Licence label | Steward | Alternatives | Decision criteria | Choose the default when… | Do not choose the default when… |
+|------------|--------------|---------------|---------|--------------|-------------------|---------------------------|---------------------------------|
+| **Application and prompt regression gates** | **promptfoo** (26.1k★; 0.124.1, 2026-10-08) | `OSI` ✅ (MIT) | promptfoo maintainers | DeepEval (`OSI` ✅ Apache-2.0; 18.9k★), OpenEvals (`OSI` ✅ MIT), Opik evals (`OSI` ✅ Apache-2.0), OpenAI Evals (`OSI` ✅ MIT; 19.6k★) | CI ergonomics, matrix testing, deterministic assertions, model-provider neutrality | you want declarative YAML assertions, prompt or model matrices and a runner that fits naturally into CI | tests already live inside pytest and custom Python metrics dominate, where **DeepEval** may be the better operational fit |
+| **RAG metrics** | **Ragas** (16.0k★; release cadence slower than peers) | `OSI` ✅ (Apache-2.0) | Ragas maintainers | DeepEval RAG metrics, TruLens (`OSI` ✅ MIT; 3.6k★), Phoenix evals (`Source-available` ⚠️ Elastic-2.0; 11.9k★), Giskard (`OSI` ✅ Apache-2.0; 5.9k★) | Need for retrieval versus generation split, faithfulness metrics, labelled-chunk support | retrieval quality, faithfulness and context use are the main questions and you want a well-known RAG-specific metric set | you need trace-native observability, broader agent testing or a faster-moving maintainer cadence than Ragas currently shows |
+| **Agent, tool-use and safety evals** | **Inspect AI** (3.0k★; 0.3.281, 2026-10-15) | `OSI` ✅ (MIT) | UK AI Security Institute | Inspect Evals (`OSI` ✅ MIT; 0.7k★), promptfoo red-team mode, Giskard (`OSI` ✅ Apache-2.0), Pydantic Evals (`OSI` ✅ MIT, coupled to Pydantic AI) | Sandboxed multi-step tasks, trajectory scoring, task success against end state, safety suites | you need sandboxed, multi-step agent tasks with repeat runs and strong judge plus rubric support | you mainly need prompt regression or simple endpoint red-teaming, where promptfoo or garak will be lighter to operate |
+| **Model benchmark harness** | **lm-evaluation-harness** (14.2k★; v0.4.13, 2026-08-31) | `OSI` ✅ (MIT) | EleutherAI maintainers | LightEval (`OSI` ✅ MIT), HELM (`OSI` ✅ Apache-2.0; 2.9k★), OpenCompass (`OSI` ✅ Apache-2.0; 7.5k★), OpenAI Evals (`OSI` ✅ MIT) | Breadth of academic tasks, endpoint flexibility, reproducibility | you want standard academic tasks against OpenAI-compatible or local endpoints | you need broader scenario-style reporting with methodology baked in, where **HELM** may be the closer fit |
+| **Experiments, datasets and score storage** | **Opik** (22.7k★; 2.2.103, 2026-10-16) | `OSI` ✅ (Apache-2.0) | Comet | MLflow (`OSI` ✅ Apache-2.0; 28.4k★), Langfuse (`Open-core` ⚠️; 36.0k★), TruLens (`OSI` ✅ MIT), Phoenix (`Source-available` ⚠️ Elastic-2.0) | Trace linkage, dataset versioning, online evaluators, licence posture, review UI | you want one pure-OSS system to hold datasets, experiments, traces and eval scores beside P07 observability | your organisation already standardised on MLflow or Langfuse and the marginal gain of moving score storage is low |
+| **Safety and red-team scanning** | **garak** (9.6k★; v0.17.1, 2026-10-16) | `OSI` ✅ (Apache-2.0) | NVIDIA | Giskard (`OSI` ✅ Apache-2.0; v3 rewrite), promptfoo red-team, DeepTeam (`OSI` ✅ Apache-2.0), Inspect safety tasks | Breadth of vulnerability probes, endpoint coverage, CI friendliness, repeated scans | you want broad vulnerability probes against a model endpoint and a tool that can keep running outside one framework | you need richer business-rule checks, dynamic test generation or agent-native vulnerability scanning in Python, where **Giskard** may fit better |
+| **Drift and data-quality monitoring** | **Evidently** (8.0k★; v0.7.23, 2026-09-11) | `OSI` ✅ (Apache-2.0) | Evidently AI | Phoenix, Langfuse online evaluators, Opik online evaluation rules | Report-style monitoring, drift tests, text-quality checks over time | you want report-style drift, text-quality and test-suite monitoring alongside classic ML | the trace UI already provides the required online evaluators and a separate monitoring library would duplicate effort |
+
+### 3.1 Trade-offs and default reasoning
+
+1. **Use one CI runner for regressions and one benchmark harness for model shortlisting.** Mixing them creates slow, expensive gates that nobody trusts.
+2. **Keep RAG and agent evals distinct.** Retrieval metrics do not tell you whether tool use was correct, and task success does not tell you whether retrieved evidence was faithful.
+3. **Store scores next to traces where possible.** Orphaned CSVs and HTML reports decay fast; trace-linked scores support incidents, audits and P10 cost joins.
+4. **Prefer `OSI` score stores when they are credible.** Opik, MLflow and TruLens cover the core storage path without the open-core or source-available boundaries of Langfuse and Phoenix.
 
 Notes:
 
-- Ragas activity is slower than peers (last release January 2026); keep an escape path to DeepEval.
-- Phoenix is `Source-available` (Elastic-2.0, no managed-service resale); Langfuse is `Open-core`. Prefer the Apache-2.0 options when licence risk matters.
-- `openai/evals` (19.6k★; last push 2026-04) reports licence `NOASSERTION` through the API; **Unverified** whether it remains actively maintained, so it is not a default pick.
+- **OpenAI Evals status correction.** The repository now points readers to dashboard-based Evals as well, but the GitHub repository itself carries an MIT `LICENSE.md`; it is no longer a `NOASSERTION` case. It is still most attractive when OpenAI APIs are already central.
+- **Giskard status correction.** The repository now redirects to `giskard-oss`, whose README says v3 is a fresh rewrite for agentic systems and v2 is legacy for older ML-focused use cases.
+- **Ragas maintenance risk.** It remains useful, but its visible release cadence is slower than peers; keep an escape path to DeepEval or TruLens.
 - Do not conflate benchmark harnesses with application evals: a strong MMLU-style score does not show your workflow works.
 
 Default platform stance:
 
-1. **One application-eval runner in CI** (promptfoo or DeepEval) and **one benchmark runner** (lm-eval-harness) for model comparison.
+1. **One application-eval runner in CI** (promptfoo or DeepEval) and **one benchmark runner** (lm-evaluation-harness) for model comparison.
 2. **Inspect AI** for agent and safety evals that need sandboxes and multi-turn scoring.
-3. **Scores live next to traces** in the LLM UI from [P07](./07-observability-evaluation.md).
+3. **Scores live next to traces** in the LLM UI from [P07](./07-observability-evaluation.md), with **Opik** the pure-OSS default.
 4. **Human labels are the anchor**; judges are calibrated against them.
 
 ## 4. Reference design
@@ -71,8 +86,9 @@ Default platform stance:
 4. **Gate.** Compare to the baseline run on the same dataset; fail on regression beyond a threshold per metric and per critical slice, not only on the mean.
 5. **Progressive delivery.** After the offline gate: shadow traffic, then canary or A/B with guardrail metrics (latency, cost, refusal rate, safety flags). Rollout mechanics for models are in [P04](./04-model-lifecycle-adaptation.md), routing in [P02](./02-ai-gateway-routing.md).
 6. **Online evaluation.** Sample production traces through the same scorers asynchronously; collect thumbs, edits and escalations; alert on score drops.
-7. **Human loop.** Review queue for low-confidence, flagged and random samples; disagreements adjudicated; confirmed failures become new dataset rows.
-8. **Reporting.** Scores per model, prompt version, tenant and scenario visible in dashboards; quality joins cost in [P10](./10-governance-finops.md) as cost per successful task.
+7. **Result store.** Write runs, rubric versions, judge versions and adjudication decisions to a trace-linked system such as Opik, MLflow or another P07-aligned store.
+8. **Human loop.** Review queue for low-confidence, flagged and random samples; disagreements adjudicated; confirmed failures become new dataset rows.
+9. **Reporting.** Scores per model, prompt version, tenant and scenario visible in dashboards; quality joins cost in [P10](./10-governance-finops.md) as cost per successful task.
 
 Design rules:
 
@@ -200,6 +216,7 @@ Wire it as a CI job that exits non-zero when assertions fail, and store the resu
 - **Dataset curation:** monthly review; retire stale rows; add failure cases after incidents.
 - **Judge hygiene:** re-calibrate after judge model, rubric or provider changes; keep a human-labelled calibration set.
 - **Threshold ownership:** product owns quality thresholds, risk owns safety thresholds, platform owns the runner and its reliability.
+- **Result-store hygiene:** expire obsolete experiments carefully, but retain enough evidence for audits, baselines and incident replay.
 - **Flake control:** track variance per metric; rerun or widen thresholds instead of disabling.
 - **Cost control:** budget eval spend; cache deterministic scorer results; sample online scoring.
 - **Drift response:** a falling online score triggers the checklist: retrieval index version, prompt version, tool path, upstream model change, then dataset shift.
@@ -210,6 +227,7 @@ Operational heuristics:
 - If a judge score rises while user complaints rise, the judge or dataset is stale: recalibrate.
 - If offline passes but online drops, the dataset no longer matches traffic: resample from production.
 - If an upstream hosted model changes silently, pinned snapshot IDs and nightly evals reveal it first.
+- If no one can explain why a gate failed six weeks later, the result store is not keeping enough rubric, judge and trace context.
 
 ## 7. Pitfalls
 
@@ -221,6 +239,7 @@ Operational heuristics:
 - **Skipping evals for non-model changes.** Chunking, parsers, routing and tool changes alter outcomes.
 - **Flaky blocking tests** that teams learn to bypass.
 - **Single-run agent evals** on stochastic systems.
+- **Keeping scores with no trace or rubric context.** The audit trail disappears exactly when product or risk asks for it.
 - **Eval data with personal data** copied from production without review.
 - **No online signal.** Offline-only teams discover drift from complaints.
 - **Over-trusting synthetic data** generated by the model under test.
@@ -232,7 +251,7 @@ Operational heuristics:
 - [ ] One golden set (30 to 100 cases) in Git with owner and version
 - [ ] One eval runner (promptfoo or DeepEval) executing in CI on prompt and model changes
 - [ ] Deterministic checks (format, citations, tool-call validity) before any LLM judge
-- [ ] Baseline results stored with git SHA; failing gate blocks merge
+- [ ] Baseline results stored with git SHA and dataset version; failing gate blocks merge
 
 ### Production
 
@@ -240,6 +259,7 @@ Operational heuristics:
 - [ ] Judge model pinned, rubric versioned, calibrated against human labels
 - [ ] Dev set and locked holdout separated; gates cover critical slices
 - [ ] Online sampling scores production traces and writes scores back to traces ([P07](./07-observability-evaluation.md))
+- [ ] Result store keeps dataset version, rubric version and judge version with each run
 - [ ] Safety suite (injection, jailbreak, leakage, over-refusal) runs on every change
 - [ ] Shadow or canary step with automatic rollback before full rollout
 - [ ] Human review queue with feedback flowing into datasets
@@ -251,6 +271,7 @@ Operational heuristics:
 - [ ] Benchmark policy: shortlist with public benchmarks, decide with application evals ([P04](./04-model-lifecycle-adaptation.md))
 - [ ] Threshold ownership mapped to product, risk and platform; quality joined to cost in [P10](./10-governance-finops.md)
 - [ ] Evidence retention for audits and model-risk reviews ([P10](./10-governance-finops.md))
+- [ ] Result-store retention and deletion policy aligned with P07 telemetry retention
 - [ ] Post-incident process adds regression cases within an agreed SLA
 
 ## 9. Sources
@@ -263,12 +284,13 @@ Primary upstreams to re-check:
 - [TruLens repository](https://github.com/truera/trulens)
 - [OpenEvals repository](https://github.com/langchain-ai/openevals)
 - [Inspect AI repository](https://github.com/UKGovernmentBEIS/inspect_ai) and [Inspect Evals repository](https://github.com/UKGovernmentBEIS/inspect_evals)
+- [Pydantic AI repository](https://github.com/pydantic/pydantic-ai) and [Pydantic Evals documentation](https://pydantic.dev/docs/ai/evals/evals/)
 - [lm-evaluation-harness repository](https://github.com/EleutherAI/lm-evaluation-harness)
 - [LightEval repository](https://github.com/huggingface/lighteval), [HELM repository](https://github.com/stanford-crfm/helm), [OpenCompass repository](https://github.com/open-compass/opencompass)
 - [garak repository](https://github.com/NVIDIA/garak)
 - [Giskard repository](https://github.com/Giskard-AI/giskard-oss)
 - [Evidently repository](https://github.com/evidentlyai/evidently)
-- [Langfuse repository](https://github.com/langfuse/langfuse), [Arize Phoenix repository](https://github.com/Arize-ai/phoenix), [MLflow repository](https://github.com/mlflow/mlflow), [Opik repository](https://github.com/comet-ml/opik)
-- [openai/evals repository](https://github.com/openai/evals)
+- [Opik repository](https://github.com/comet-ml/opik), [MLflow repository](https://github.com/mlflow/mlflow), [Langfuse repository](https://github.com/langfuse/langfuse), [Arize Phoenix repository](https://github.com/Arize-ai/phoenix)
+- [openai/evals repository](https://github.com/openai/evals) and its [`LICENSE.md`](https://github.com/openai/evals/blob/main/LICENSE.md)
 
-Licences, stars, release dates and archived flags were **Opened** on 2026-10-11. Practices in section 5 (judge calibration, gate design, A/B discipline) are architectural guidance, not tool facts. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+The original table facts were read on 2026-10-11 (**Opened**). Added rows and status corrections for Opik, OpenAI Evals, Giskard and Pydantic-linked agent eval alternatives were spot-checked on 2026-10-17 (**Opened**). Practices in section 5 (judge calibration, gate design, A/B discipline) are architectural guidance, not tool facts. Refresh with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).

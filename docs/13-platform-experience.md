@@ -40,46 +40,64 @@ It does **not** own the enforcement mechanics. Keys, rate limits and budgets are
 
 ### 3.1 Portals and catalogues
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|------------------|----------------------------|
-| Developer portal | **Backstage** | OSI (`Apache-2.0`) | Backstage project (CNCF incubating, **Opened** in landscape file) | Red Hat Developer Hub (`Apache-2.0`, Backstage distribution, commercial support), Port (SaaS, `Not OSS`), Headlamp plus a docs site for cluster-centric teams | you have a platform team able to own a TypeScript app and want the largest plugin ecosystem and a neutral foundation home |
-| Cluster UI | **Headlamp** | OSI (`Apache-2.0`) | Kubernetes SIG UI (`kubernetes-sigs`; the CNCF landscape lists it as sandbox) | Kubeflow Central Dashboard (`Apache-2.0`, CNCF graduated project) for ML teams; Kubernetes Dashboard is **archived** (`kubernetes-retired`, **Opened**), so avoid it | you need an extensible, plugin-based cluster view; it also embeds in Backstage-style workflows |
-| Docs-as-code | **MkDocs Material** or Backstage **TechDocs** | OSI (`MIT` for Material; Backstage is `Apache-2.0`) | Squidfunk (Material); Backstage project | plain Markdown in the repo | docs should live next to code and be indexed in the catalogue |
+Defaults here were weighted towards open licensing, plugin ecosystem, neutral foundations and whether the experience layer stays a thin consumer of the other pillars rather than re-implementing them.
 
-Port is a commercial SaaS portal; no OSS Port repository was found under that name (**Opened**: `gh api` 404), so it appears here only as a reference point. Backstage is a framework you assemble and run, not a product you install; budget a small dedicated team (**Unverified**, editorial estimate).
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Developer portal | **Backstage** | OSI (`Apache-2.0`) | Backstage project (CNCF incubating, **Opened** in landscape file) | Red Hat Developer Hub (`Apache-2.0`, Backstage distribution, commercial support), Port (SaaS, `Not OSS`), Headlamp plus a docs site for cluster-centric teams | biggest plugin ecosystem and neutral home, but it is a framework you must productise | you have a platform team able to own a TypeScript app and want one catalogue for models, services, templates and docs | you want a turnkey portal with no internal product team or you only need a small cluster UI, not a full platform portal |
+| Cluster UI | **Headlamp** | OSI (`Apache-2.0`) | Kubernetes SIG UI (`kubernetes-sigs`) | Kubeflow Central Dashboard (`Apache-2.0`) for ML teams; Kubernetes Dashboard is **archived**, so avoid it | simple and extensible, but it is an operator view rather than a platform-product front door | you need an extensible, plugin-based cluster view that can sit behind or beside the main portal | you expect a cluster UI to replace a service catalogue, onboarding flow or developer portal |
+| Docs-as-code | **MkDocs Material** or Backstage **TechDocs** | OSI (`MIT` for Material; Backstage is `Apache-2.0`) | Squidfunk (Material); Backstage project | plain Markdown in the repo | fast docs delivery, but one more publishing path to keep in sync with product reality | docs should live next to code and be indexed in the catalogue | the team cannot yet keep docs current and another rendered site would just fossilise faster |
+
+Port is a commercial SaaS portal; no OSS Port repository was found under that name, so it appears here only as a reference point. Backstage is a framework you assemble and run, not a product you install; budget a small dedicated team.
 
 ### 3.2 Self-service and templating
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|------------------|----------------------------|
-| Team resource composition | **Crossplane** | OSI (`Apache-2.0`) | Crossplane project (CNCF graduated) | kro (`Apache-2.0`, Kubernetes SIG Cloud Provider hosted - steward **Unverified**), Helm plus GitOps ApplicationSets | one `Team` or `AIProject` manifest should expand into namespace, quota, policy and gateway key |
-| Software templates | **Backstage Software Templates** | OSI (`Apache-2.0`) | Backstage project | Cookiecutter-style repos, Azure Developer CLI templates (`MIT`, `azd`) | templates should open a pull request in the same portal teams already use |
-| Dev environments | **Coder** | OSI-ish: `AGPL-3.0` (**Opened**) | Coder Inc. (vendor) | devfile-based tools, plain devcontainers | you need governed cloud workspaces with GPU access; check AGPL fit |
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Team resource composition | **Crossplane** | OSI (`Apache-2.0`) | Crossplane project (CNCF graduated) | kro (`Apache-2.0`, Kubernetes SIG Cloud Provider hosted - steward **Unverified**), Helm plus GitOps ApplicationSets | strongest self-service abstraction, but it needs careful platform API design | one `Team` or `AIProject` manifest should expand into namespace, quota, policy and gateway key | the platform is too small to justify another abstraction layer beyond reviewed IaC modules |
+| Software templates | **Backstage Software Templates** | OSI (`Apache-2.0`) | Backstage project | Cookiecutter-style repos, Azure Developer CLI templates (`MIT`, `azd`) | best portal integration, but tied to Backstage if that is not already your front door | templates should open a pull request in the same portal teams already use | the portal is not Backstage or teams only need repository scaffolding with no catalogue workflow |
+| Dev environments | **Coder** | OSI (`AGPL-3.0`) | Coder Inc. | devfile-based tools, plain devcontainers | governed remote workspaces, but with AGPL and vendor-led product direction | you need governed cloud workspaces with GPU access; check AGPL fit | local devcontainers are enough and you do not need centrally managed remote environments |
 
-### 3.3 Front-ends for users
+### 3.3 Identity and SSO for the experience layer
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|------------------|----------------------------|
-| Chat UI | **LibreChat** | OSI (`MIT`, **Opened**) | LibreChat project (repo now at `LibreChat-AI/LibreChat`) | Open WebUI (`Source-available`, branding clause), Hugging Face chat-ui (`Apache-2.0`), LobeChat (`Source-available`, community licence based on Apache-2.0 with extra terms) | you want a permissive licence, SSO and multi-provider support with no redistribution constraints |
-| Local desktop chat | **Jan** | **Unverified** (GitHub reports no SPDX; the notice names Menlo Research) | Menlo Research | LM Studio and similar (`Not OSS`) | individual local use, not a shared platform front-end |
-| IDE assistant | **Continue** | OSI (`Apache-2.0`) | Continue Dev | commercial assistants (`Not OSS`) | developers should reach models through your gateway, not personal keys |
+P09 owns identity *policy*; this section compares the experience-layer fit for portals, chat UIs and onboarding.
 
-Licence watch: **Open WebUI** is no longer plain BSD-3. Its `LICENSE` is a BSD-3-style text plus a clause that forbids altering, removing or replacing the "Open WebUI" branding unless you have 50 or fewer end users in any rolling 30 days, written permission, or an enterprise licence (**Opened**, 2026-10-11; GitHub reports `NOASSERTION`). Label it `Source-available` for platform decisions; legal should read the current text, since it has changed before. Use it for internal pilots, or buy the enterprise licence. **LobeChat** (now `lobehub/lobehub`) is also under a community licence derived from Apache-2.0 (**Opened**). LibreChat's `MIT` text is the clean choice.
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Front-end SSO and group sync | **Keycloak** | OSI (`Apache-2.0`) | Keycloak project | Authentik (`Open-core`, MIT outside `enterprise/`), Dex (`Apache-2.0`), existing enterprise IdP (`Not OSS`) | richest self-service IAM, but also the heaviest operationally | the portal, chat UI and onboarding flows need one self-hosted OIDC/SAML broker with group and realm features | a lightweight OIDC bridge to an existing IdP is enough, where Dex may be simpler |
+
+### 3.4 Builder studios and front-ends
+
+Builder studios are **not** a replacement for the portal, runtime or governance stack. They are self-service surfaces for internal builders on top of the gateway and the approved tool catalogues.
+
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Visual AI app / agent studio | **Langflow** | OSI (`MIT`) | Langflow project | Dify (`Source-available`, modified Apache-2.0 with multi-tenant restriction), Flowise (`Open-core`, archived repository), low-code-free golden paths only | cleanest licence and active upstream, but it is a builder surface rather than a governed platform control plane | internal builders need a visual composition surface wired to approved gateway endpoints and tools | you really need a portal, a registry or a multi-tenant product shell rather than a flow builder |
+| Chat UI | **LibreChat** | OSI (`MIT`, **Opened**) | LibreChat project (repo now at `LibreChat-AI/LibreChat`) | Open WebUI (`Source-available`, branding clause), Hugging Face chat-ui (`Apache-2.0`), Dify (`Source-available`) | clean licence and multi-provider support, but less ecosystem gravity than Open WebUI | you want a permissive licence, SSO and multi-provider support with no redistribution constraints | the team wants to customise or rebrand the UI heavily and the chosen front-end licence gets in the way |
+| Local desktop chat | **Jan** | **Unverified** (GitHub reports no SPDX; the notice names Menlo Research) | Menlo Research | LM Studio and similar (`Not OSS`) | easy local testing, but not a shared governed platform surface | individual local use, not a shared platform front-end | you need central audit, SSO and shared policy enforcement |
+| IDE assistant | **Continue** | OSI (`Apache-2.0`) | Continue Dev | commercial assistants (`Not OSS`) | easiest gateway-aligned path for developers, but still another client to document and support | developers should reach models through your gateway, not personal keys | your security model forbids IDE plug-ins or you cannot support another client surface |
+
+Licence watch:
+
+- **Open WebUI** is no longer plain BSD-3. Its `LICENSE` is a BSD-3-style text plus a clause that forbids altering, removing or replacing the "Open WebUI" branding unless you have 50 or fewer end users in any rolling 30 days, written permission, or an enterprise licence (**Opened** in this review). Label it `Source-available` for platform decisions; legal should read the current text, since it has changed before.
+- **Dify** uses a modified Apache-2.0 licence with additional conditions, including a multi-tenant restriction and frontend branding requirements. Treat it as `Source-available`, not OSI.
+- **Flowise** now mixes Apache-2.0 code with commercial enterprise directories and its GitHub repository is archived (**Opened**); it is not a safe default for new platform bets.
+- **LobeChat** (now `lobehub/lobehub`) is also under a community licence derived from Apache-2.0 (**Opened**). LibreChat's `MIT` text remains the clean choice.
 
 Notes:
 
-- Licence, stars, archive flag and activity were checked on 2026-10-11 via GitHub (**Opened**); CNCF levels come from the landscape file. Latest releases seen: Backstage v1.55.3, Open WebUI v0.12.0.
-- vCluster, Capsule and tenancy tools are in §3.4.
-- Why the defaults: Backstage wins on adoption, foundation home and plugin ecosystem; LibreChat wins on licence signal over the more popular Open WebUI (about 154k stars versus about 46k, a *popularity* signal that does not outweigh the licence constraint for redistribution).
+- Licence, stars, archive flag and activity were checked on 2026-10-11 via GitHub (**Opened**) and re-checked selectively in this review. Langflow was at about 155.8k★ with latest release `v1.12.6`; Dify at about 158.7k★ with latest release `1.17.1`; Flowise at about 55.5k★ but archived.
+- vCluster, Capsule and tenancy tools are in §3.5.
+- Why the defaults: Backstage wins on adoption, foundation home and plugin ecosystem; Keycloak is the best experience-layer IAM fit when you need a self-hosted broker; Langflow wins the builder-studio slot on licence clarity; LibreChat wins on licence signal over the more popular Open WebUI.
 
-### 3.4 Tenancy tools
+### 3.5 Tenancy tools
 
-| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Choose the default when... |
-|------------|--------------|---------------|---------|------------------|----------------------------|
-| Namespace tenancy | **Namespaces + ResourceQuota + RBAC + NetworkPolicy** | OSI (`Apache-2.0`, Kubernetes) | Kubernetes project | Capsule (`Apache-2.0`, CNCF sandbox) to group namespaces into tenants | teams are internal and trusted and you want the simplest model |
-| Tenant abstraction | **Capsule** | OSI (`Apache-2.0`) | Capsule project (CNCF sandbox) | Kubernetes Hierarchical Namespaces (`Apache-2.0`, **archived**), Kyverno policies | tenants own several namespaces and need delegated administration with guardrails |
-| Virtual clusters | **vCluster** | OSI (`Apache-2.0`) | Loft Labs (vendor; not a CNCF project in the landscape file) | Kamaji (`Apache-2.0`), HyperShift (`Apache-2.0`) for hosted control planes | tenants need their own API server, CRDs or admission webhooks without a cluster each |
-| Dedicated clusters | **Cluster API** | OSI (`Apache-2.0`) | Kubernetes SIG Cluster Lifecycle | cloud-managed cluster APIs (`Not OSS`) | hard isolation, regulatory separation or noisy-neighbour GPU risk |
+| Capability | Default pick | Licence label | Steward | 1-3 alternatives | Key trade-off | Choose the default when... | Do not choose the default when... |
+|------------|--------------|---------------|---------|------------------|---------------|----------------------------|-----------------------------------|
+| Namespace tenancy | **Namespaces + `ResourceQuota` + RBAC + `NetworkPolicy`** | OSI (`Apache-2.0`, Kubernetes) | Kubernetes project | Capsule (`Apache-2.0`, CNCF sandbox) to group namespaces into tenants | simplest model and easiest to explain, but it is still soft multi-tenancy on one control plane | teams are internal and trusted and you want the simplest model | tenants need their own CRDs, admission stack or control-plane blast-radius boundary |
+| Tenant abstraction | **Capsule** | OSI (`Apache-2.0`) | Capsule project (CNCF sandbox) | Kubernetes Hierarchical Namespaces (`Apache-2.0`, **archived**), Kyverno policies | delegated namespace administration without a new control plane, but still soft multi-tenancy | tenants own several namespaces and need delegated administration with guardrails | hard isolation or CRD-level separation is required, where vCluster or a dedicated cluster fits better |
+| Virtual clusters | **vCluster** | OSI (`Apache-2.0`) | Loft Labs | Kamaji (`Apache-2.0`) and HyperShift (`Apache-2.0`) for hosted control planes | strongest isolation before a dedicated cluster, but still shares worker nodes unless you isolate them too | tenants need their own API server, CRDs or admission webhooks without a cluster each | regulatory or hostile-tenant requirements need a real cluster boundary, or hosted control planes such as Kamaji fit the ops model better |
+| Dedicated clusters | **Cluster API** | OSI (`Apache-2.0`) | Kubernetes SIG Cluster Lifecycle | cloud-managed cluster APIs (`Not OSS`) | strongest isolation, but the highest operational and cost burden | hard isolation, regulatory separation or noisy-neighbour GPU risk justify a real cluster per tenant | the tenant profile does not justify the extra control planes, upgrades and fleet management |
 
 Hierarchical Namespaces (HNC) moved to `kubernetes-retired` and is archived (**Opened**, last push 2025-04-07). Do not choose it for new designs; Capsule or policy-driven namespace trees replace it.
 
@@ -232,6 +250,7 @@ Pair these with the original DORA four keys for the platform's own delivery, and
 - [ ] Stand up a catalogue and at least three golden-path templates.
 - [ ] Gate contract changes with OpenAPI lint and diff in CI.
 - [ ] Offer a sanctioned chat UI with SSO and group-based model access; licence-reviewed.
+- [ ] Decide whether any visual builder studio is sanctioned, and if so route it through the same gateway, identity and policy path as code-built apps.
 - [ ] Give every team a usage and cost dashboard (tokens, GPU hours, budget burn).
 - [ ] Run a support rota or office hours and publish a deprecation policy.
 - [ ] Track the adoption metrics monthly.
@@ -239,6 +258,7 @@ Pair these with the original DORA four keys for the platform's own delivery, and
 ### Enterprise
 
 - [ ] Offer tiered tenancy (namespace, vCluster, dedicated cluster) with documented selection criteria.
+- [ ] Standardise one front-end SSO and group-sync path for portal, chat and builder surfaces.
 - [ ] Enforce node-pool or sandbox isolation for hostile or regulated tenants.
 - [ ] Automate tenant offboarding, key revocation and data deletion.
 - [ ] Provide auditors read-only evidence views with no engineering intermediary.
@@ -249,10 +269,10 @@ Pair these with the original DORA four keys for the platform's own delivery, and
 
 - [Backstage](https://github.com/backstage/backstage), [Red Hat Developer Hub](https://github.com/redhat-developer/rhdh), [Backstage Software Templates](https://backstage.io/docs/features/software-templates/)
 - [Headlamp](https://github.com/kubernetes-sigs/headlamp), [Kubeflow](https://github.com/kubeflow/kubeflow), [Kubernetes Dashboard (archived)](https://github.com/kubernetes-retired/dashboard)
-- [Open WebUI](https://github.com/open-webui/open-webui) and its [LICENSE](https://github.com/open-webui/open-webui/blob/main/LICENSE), [LibreChat](https://github.com/LibreChat-AI/LibreChat), [LobeChat](https://github.com/lobehub/lobehub), [Hugging Face chat-ui](https://github.com/huggingface/chat-ui), [Jan](https://github.com/janhq/jan), [Continue](https://github.com/continuedev/continue)
+- [Open WebUI](https://github.com/open-webui/open-webui) and its [LICENSE](https://github.com/open-webui/open-webui/blob/main/LICENSE), [LibreChat](https://github.com/LibreChat-AI/LibreChat), [LobeChat](https://github.com/lobehub/lobehub), [Hugging Face chat-ui](https://github.com/huggingface/chat-ui), [Jan](https://github.com/janhq/jan), [Continue](https://github.com/continuedev/continue), [Dify](https://github.com/langgenius/dify), [Flowise](https://github.com/FlowiseAI/Flowise), [Langflow](https://github.com/langflow-ai/langflow)
 - [Capsule](https://github.com/projectcapsule/capsule), [vCluster](https://github.com/loft-sh/vcluster), [Kamaji](https://github.com/clastix/kamaji), [HyperShift](https://github.com/openshift/hypershift), [Cluster API](https://github.com/kubernetes-sigs/cluster-api), [Hierarchical Namespaces (archived)](https://github.com/kubernetes-retired/hierarchical-namespaces)
 - [Kubernetes multi-tenancy docs](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
-- [Crossplane](https://crossplane.io/), [kro](https://github.com/kubernetes-sigs/kro), [Coder](https://github.com/coder/coder), [Azure Developer CLI](https://github.com/Azure/azure-dev)
+- [Crossplane](https://crossplane.io/), [kro](https://github.com/kubernetes-sigs/kro), [Coder](https://github.com/coder/coder), [Azure Developer CLI](https://github.com/Azure/azure-dev), [Keycloak](https://github.com/keycloak/keycloak), [Dex](https://github.com/dexidp/dex), [Authentik](https://github.com/goauthentik/authentik)
 - [OpenCost](https://github.com/opencost/opencost), [MkDocs Material](https://github.com/squidfunk/mkdocs-material)
 - [openai-openapi](https://github.com/openai/openai-openapi), [Spectral](https://github.com/stoplightio/spectral), [oasdiff](https://github.com/oasdiff/oasdiff), [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator)
 - [DORA](https://dora.dev/) for the four keys referenced in the adoption metrics

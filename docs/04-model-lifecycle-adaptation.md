@@ -45,38 +45,42 @@ This pillar does **not** own:
 
 ## 3. Tool comparison
 
-Licence labels, stars (rounded), archived flags and latest releases were read on 2026-10-11 from the GitHub API (**Opened**). CNCF levels come from the CNCF landscape file (**Opened**). Stars: MLflow ~28.3k, Kubeflow Model Registry ~0.2k, KitOps ~1.4k, ModelPack spec ~0.2k, ORAS ~2.5k, llm-compressor ~3.9k, GPTQModel ~1.3k, Model Optimizer ~5.3k, llama.cpp ~130.8k, Unsloth ~77.8k, LLaMA-Factory ~75.4k, Axolotl ~12.6k, TRL ~19.5k, PEFT ~21.8k, torchtune ~5.8k, NeMo ~18.6k, Kubeflow Trainer ~2.2k, Ray ~44.0k, Kueue ~3.1k, Volcano ~6.0k, KAI Scheduler ~1.6k, LoRAX ~3.8k, vLLM ~93.6k. "Choose when" guidance is editorial; no benchmarks are claimed. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+Licence labels, stars (rounded), archived flags and notable status notes were read from GitHub on 2026-10-11 unless a row says otherwise; DVC, Olive, LoRAX and lm-evaluation-harness were spot-checked again on 2026-10-17 (**Opened**). CNCF levels come from the CNCF landscape file (**Opened**). "Choose when" guidance is editorial; no benchmarks are claimed. Re-verify with [Methodology §5](./00-methodology.md#5-snapshot-and-refresh).
+
+Comparison criteria for this pillar, in order: provenance depth, reproducibility, compatibility with the serving estate, cost of adaptation, and licence clarity.
 
 ### 3.1 Registry, catalogue and artifact distribution
 
 | Capability | Licence label | Steward | Default pick | Alternatives | Choose X when… |
 |------------|---------------|---------|--------------|--------------|----------------|
-| Model registry and experiment tracking | OSI ✅ Apache-2.0 | MLflow project (v3.17.0, 2026-10-07) | **MLflow** | Kubeflow Model Registry (Kubeflow Hub); Hugging Face Hub mirror as catalogue only | Choose MLflow when you want one registry for versions, aliases (champion, challenger), metrics and lineage links, usable from any training tool. Choose Kubeflow Model Registry (Apache-2.0, v0.3.17, small community, ~0.2k stars) when you already run Kubeflow and want its catalogue and KServe integration (**Unverified** depth of integration, confirm in docs). Kubeflow is listed as CNCF graduated in the landscape file; its registry sub-project is much younger than that level suggests. |
-| OCI model artifacts | OSI ✅ Apache-2.0 | ModelPack spec (CNCF sandbox per the landscape file); KitOps; ORAS | **OCI registry you already run** (Harbor or cloud registry) with ORAS | KitOps (ModelKits); ModelPack spec; Hugging Face Hub downloads into S3-compatible storage | Choose OCI artifacts when you want weights to ride the same signing, replication, scanning and RBAC as container images (see [P09](./09-security-safety.md)). ModelPack is a vendor-neutral packaging spec; KitOps is a tool that packages models as OCI artifacts (**Unverified** whether KitOps implements ModelPack at this release). Choose plain S3-compatible storage when models exceed registry layer limits or teams lack OCI tooling. |
-| Public hub mirror | Mixed (hub is a service; mirrored models carry their own licences) | Hugging Face and others | Internal mirror fed by an approved-import job | Pull-through cache; manual import only | Choose a mirror-and-import workflow so every model passes licence review and scanning before first use. A pull-through cache alone does not provide approval. |
+| Model registry and experiment tracking | OSI ✅ Apache-2.0 | MLflow project (v3.17.0, 2026-10-07) | **MLflow** | Kubeflow Model Registry (Kubeflow Hub); Hugging Face Hub mirror as catalogue only | Choose MLflow when you want one registry for versions, aliases (`champion`, `challenger`), metrics and lineage links, usable from any training tool. Do not choose it as your only answer to dataset versioning or legal approval; pair it with explicit data and approval records. Choose Kubeflow Model Registry (Apache-2.0, v0.3.17, small community, ~0.2k★) when you already run Kubeflow and its tighter catalogue fit outweighs the smaller ecosystem (**Unverified** depth of integration, confirm in docs). |
+| Dataset and pipeline lineage | OSI ✅ Apache-2.0 | DVC project / Treeverse (repo redirects from `iterative/dvc`) | Complement | MLflow artifacts; immutable lakehouse snapshots; plain manifest files | Choose DVC (~15.9k★; spot-checked 2026-10-17, **Opened**) when training sets and preprocessing outputs must be pinned by hash next to Git and reproduced without a central service. Do not choose it as the only model registry; it complements MLflow rather than replacing aliases, approvals and serving lineage. |
+| OCI model artifacts | OSI ✅ Apache-2.0 | ModelPack spec (CNCF sandbox per the landscape file); KitOps; ORAS | **OCI registry you already run** (Harbor or cloud registry) with ORAS | KitOps (ModelKits); ModelPack spec; Hugging Face Hub downloads into S3-compatible storage | Choose OCI artifacts when you want weights to ride the same signing, replication, scanning and RBAC as container images (see [P09](./09-security-safety.md)). ModelPack is a vendor-neutral packaging spec; KitOps is a tool that packages models as OCI artifacts (**Unverified** whether KitOps implements ModelPack at this release). Do not choose registry tags alone as the approval record; the registry holds bytes, while MLflow or equivalent holds governance metadata. |
+| Public hub mirror | Mixed (hub is a service; mirrored models carry their own licences) | Hugging Face and others | Internal mirror fed by an approved-import job | Pull-through cache; manual import only | Choose a mirror-and-import workflow so every model passes licence review and scanning before first use. Do not let jobs or inference pods pull directly from public hubs: a pull-through cache alone does not provide approval. |
 
-The Hugging Face Hub offers private and enterprise tiers, but a self-hosted open-source hub equivalent was not verified (**Unverified**). Treat the public hub as an upstream source and your own object store or OCI registry as the system of record.
+The Hugging Face Hub offers private and enterprise tiers, but a self-hosted open-source hub equivalent was not verified (**Unverified**). Treat the public hub as an upstream source and your own object store or OCI registry as the system of record. Default stance: **MLflow is the registry of record; DVC or equivalent dataset tooling is a complement, not a replacement**.
 
 ### 3.2 Quantisation and optimisation
 
 | Capability | Licence label | Steward | Default pick | Alternatives | Choose X when… |
 |------------|---------------|---------|--------------|--------------|----------------|
-| Post-training quantisation for vLLM | OSI ✅ Apache-2.0 | vLLM project (llm-compressor 0.14.0, 2026-09-22) | **llm-compressor** | GPTQModel; NVIDIA Model Optimizer; AutoAWQ (archived); AutoGPTQ (archived) | Choose llm-compressor when the target engine is vLLM: it produces compressed-tensors checkpoints the engine loads directly. Choose Model Optimizer (Apache-2.0) for NVIDIA-only fleets using TensorRT-LLM. GPTQModel's GitHub licence field is unrecognised (NOASSERTION): read its LICENSE file before adopting (**Unverified**). Avoid AutoAWQ and AutoGPTQ for new work: both repositories are archived (**Opened**); the AWQ and GPTQ formats still load in many engines. |
-| Edge and CPU formats | OSI ✅ MIT | ggml-org (llama.cpp) | llama.cpp (GGUF) | Ollama packaging | Choose GGUF for CPU, edge and workstation targets. Keep it out of shared GPU pools; see [P03](./03-model-serving.md). |
-| NVIDIA engine builds | Apache-2.0 with third-party portions (GitHub reports NOASSERTION) | NVIDIA | Alternative | vLLM native quantisation | Choose TensorRT-LLM engine builds only when an NVIDIA-only fleet justifies per-GPU build and cache management. |
+| Post-training quantisation for vLLM | OSI ✅ Apache-2.0 | vLLM project (llm-compressor 0.14.0, 2026-09-22) | **llm-compressor** | GPTQModel; NVIDIA Model Optimizer; AutoAWQ (archived); AutoGPTQ (archived) | Choose llm-compressor when the target engine is vLLM: it produces compressed-tensors checkpoints the engine loads directly. Do not choose it if your runtime target is ONNX, OpenVINO or TensorRT-LLM first. Choose Model Optimizer (Apache-2.0) for NVIDIA-only fleets using TensorRT-LLM. GPTQModel's GitHub licence field is unrecognised (`NOASSERTION`): read its `LICENSE` file before adopting (**Unverified**). Avoid AutoAWQ and AutoGPTQ for new work: both repositories are archived (**Opened**); the AWQ and GPTQ formats still load in many engines. |
+| ONNX and edge optimisation pipeline | OSI ✅ MIT | Microsoft | **Olive** | OpenVINO tooling; llm-compressor | Choose Olive (~2.4k★; spot-checked 2026-10-17, **Opened**) when the target runtime is ONNX Runtime, Windows, NPUs or an OpenVINO-style edge and cloud path, and you want one composed optimisation workflow. Do not choose it if the serving path is vLLM or TensorRT-LLM and you do not need ONNX conversion. |
+| Edge and CPU formats | OSI ✅ MIT | ggml-org (llama.cpp) | llama.cpp (GGUF) | Ollama packaging | Choose GGUF for CPU, edge and workstation targets. Do not expect one GGUF build to substitute for shared GPU pool lineage or server-side release management; keep it out of shared GPU pools and see [P03](./03-model-serving.md). |
+| NVIDIA engine builds | Apache-2.0 with third-party portions (GitHub reports `NOASSERTION`) | NVIDIA | Alternative | vLLM native quantisation | Choose TensorRT-LLM engine builds only when an NVIDIA-only fleet justifies per-GPU build and cache management. Do not choose them when hardware portability matters more than squeezing the last increment of performance. |
 
-Quantisation is lossy. Always register the quantised model as its own version, evaluated against the full-precision baseline on your tasks ([P08](./08-evaluation-quality.md)), not on a public leaderboard.
+Quantisation is lossy. Always register the quantised model as its own version, evaluated against the full-precision baseline on your tasks ([P08](./08-evaluation-quality.md)), not on a public leaderboard. Also keep the optimisation target aligned with the serving runtime; the best int4 path for vLLM is not automatically the best path for ONNX Runtime or TensorRT-LLM.
 
 ### 3.3 Adaptation and training
 
 | Capability | Licence label | Steward | Default pick | Alternatives | Choose X when… |
 |------------|---------------|---------|--------------|--------------|----------------|
-| SFT, preference tuning and distillation library | OSI ✅ Apache-2.0 | Hugging Face (TRL v1.15.0; PEFT v0.21.2) | **TRL with PEFT** | Axolotl; LLaMA-Factory; Unsloth; NeMo; torchtune (not maintained) | Choose TRL and PEFT for the most standard, scriptable path (SFT, DPO and other preference methods, LoRA and QLoRA). Choose Axolotl (Apache-2.0) when you want YAML-configured, reproducible recipes. Choose LLaMA-Factory (Apache-2.0) when less-technical teams need a web UI or broad model support. Choose Unsloth (Apache-2.0) when single-GPU memory efficiency and speed matter; check the licence of its optional add-ons separately (**Unverified**). Choose NeMo (Apache-2.0, NVIDIA) for NVIDIA-centred stacks at larger scale. Avoid torchtune for new work: its README states development wound down in 2025. |
-| Distributed training operator | OSI ✅ Apache-2.0 | Kubeflow community (Trainer v2.3.0) | **Kubeflow Trainer** | Ray Train (KubeRay); plain PyTorchJob; Volcano jobs | Choose Kubeflow Trainer for Kubernetes-native TrainJob resources and runtimes covering multiple frameworks. Choose Ray Train when the data and tuning pipeline already runs on Ray (Ray ~44k stars, Apache-2.0). Single-GPU LoRA jobs need only a Kubernetes Job. |
-| Queueing, quota and fair sharing | OSI ✅ Apache-2.0 | Kubernetes SIG Scheduling (Kueue v0.20.1) | **Kueue** | Volcano (CNCF incubating); NVIDIA KAI Scheduler | Choose Kueue for job queueing, quotas and borrowing across teams with the default Kubernetes scheduler. Choose Volcano (v1.15.3) when you need mature gang scheduling, batch queues and a separate scheduler. KAI Scheduler (Apache-2.0, NVIDIA) targets GPU sharing and fair share (**Unverified** feature depth). Kueue and Volcano overlap, so pick one per cluster. |
-| Multi-adapter serving | OSI ✅ Apache-2.0 | vLLM project; Predibase (LoRAX) | **vLLM multi-LoRA** | LoRAX | Choose vLLM LoRA serving to host many adapters on one base model within the engine you already run. LoRAX (Apache-2.0) predates this; its last release was 2025-01 and last push 2026-05, so treat it as slower-moving (**Opened**). |
+| SFT, preference tuning and distillation library | OSI ✅ Apache-2.0 | Hugging Face (TRL v1.15.0; PEFT v0.21.2) | **TRL with PEFT** | Axolotl; LLaMA-Factory; Unsloth; NeMo; torchtune (no longer actively maintained) | Choose TRL and PEFT for the most standard, scriptable path (SFT, DPO and other preference methods, LoRA and QLoRA). Do not choose them if less-technical operators need a heavier UI layer, or if single-GPU memory efficiency outweighs standardisation. Choose Axolotl (Apache-2.0) when you want YAML-configured, reproducible recipes. Choose LLaMA-Factory (Apache-2.0) when less-technical teams need a web UI or broad model support. Choose Unsloth (Apache-2.0) when single-GPU memory efficiency and speed matter; check the licence of its optional add-ons separately (**Unverified**). Choose NeMo (Apache-2.0, NVIDIA) for NVIDIA-centred stacks at larger scale. Avoid torchtune for new work: its README says it is no longer actively maintained. |
+| Distributed training operator | OSI ✅ Apache-2.0 | Kubeflow community (Trainer v2.3.0) | **Kubeflow Trainer** | Ray Train (KubeRay); plain PyTorchJob; Volcano jobs | Choose Kubeflow Trainer for Kubernetes-native `TrainJob` resources and runtimes covering multiple frameworks. Do not choose it when most jobs are single-GPU Jobs, or when the estate is already Ray-native and Ray Train keeps one control plane. Single-GPU LoRA jobs need only a Kubernetes Job. |
+| Queueing, quota and fair sharing | OSI ✅ Apache-2.0 | Kubernetes SIG Scheduling (Kueue v0.20.1) | **Kueue** | Volcano (CNCF incubating); NVIDIA KAI Scheduler | Choose Kueue for job queueing, quotas and borrowing across teams with the default Kubernetes scheduler. Do not run Kueue and Volcano with overlapping responsibilities in the same cluster unless ownership is explicit. Choose Volcano (v1.15.3) when you need mature gang scheduling, batch queues and a separate scheduler. KAI Scheduler (Apache-2.0, NVIDIA) targets GPU sharing and fair share (**Unverified** feature depth). |
+| Multi-adapter serving | OSI ✅ Apache-2.0 | vLLM project; Predibase (LoRAX) | **vLLM multi-LoRA** | LoRAX | Choose vLLM LoRA serving to host many adapters on one base model within the engine you already run. Do not choose LoRAX for new greenfield builds without a migration plan: the repository is archived (**Opened**, spot-checked 2026-10-17), so treat it as a legacy reference rather than an active default. |
 
-Why these defaults: TRL and PEFT have the broadest recipes and the shortest path to a Kubernetes Job; Kueue is a SIG project that composes with Kubeflow Trainer and Ray; vLLM serves both the base and adapters in one engine. Security posture and operability (Helm charts, HA) were not compared per tool: **Unverified**.
+Why these defaults: TRL and PEFT have the broadest recipes and the shortest path to a Kubernetes Job; Kueue is a SIG project that composes with Kubeflow Trainer and Ray; vLLM serves both the base and adapters in one engine. Promotion gates usually call evaluation harnesses such as **lm-evaluation-harness** (~14.2k★, Apache-2.0; spot-checked 2026-10-17, **Opened**) from [P08](./08-evaluation-quality.md); they are inputs to this pillar, not alternatives to the training stack. Security posture and operability (Helm charts, HA) were not compared per tool: **Unverified**.
 
 ### 3.4 Model licences
 
@@ -94,7 +98,7 @@ Open weights are not open source ([Methodology §3](./00-methodology.md)). The t
 Selection process, in order:
 
 1. **Licence gate.** Record the licence, restrictions and whether derivatives (adapters, quantised copies, distilled models) must carry the same terms. Reject unclear cases.
-2. **Capability gate.** Shortlist two to four candidates; run your own task evals ([P08](./08-evaluation-quality.md)). Public benchmarks only narrow the list.
+2. **Capability gate.** Shortlist two to four candidates; run your own task evals ([P08](./08-evaluation-quality.md)), typically through `lm-evaluation-harness` or a task-specific suite. Public benchmarks only narrow the list.
 3. **Fit gate.** Parameter count, quantisation options, context length and engine support against the GPU classes in [P03](./03-model-serving.md).
 4. **Cost gate.** Cost per million tokens on your hardware against hosted alternatives, via [P10](./10-governance-finops.md).
 5. **Safety and provenance gate.** Safe format (prefer safetensors over pickle), scanning and signature checks in [P09](./09-security-safety.md).
@@ -121,7 +125,7 @@ Components:
 
 1. **Mirror and registry.** Object storage or an OCI registry holds immutable artifacts addressed by digest; MLflow holds metadata, aliases and links.
 2. **Import pipeline.** The only way in: records source URL, revision hash, licence, safe-format check and reviewer.
-3. **Optimisation and tuning pipelines.** Containerised, queue-scheduled jobs that read a registered base model and write a new registered version.
+3. **Optimisation and tuning pipelines.** Containerised, queue-scheduled jobs that read a registered base model plus a versioned dataset snapshot (DVC or equivalent manifest) and write a new registered version.
 4. **Eval gate.** Every registered candidate must pass the regression suite in [P08](./08-evaluation-quality.md) before it can take the `challenger` alias.
 5. **Promotion and rollout.** [P03](./03-model-serving.md) executes canary traffic splits; this pillar decides when a version may enter and leave.
 
@@ -169,7 +173,7 @@ Substitute your registry, tag and media type. For KServe, the storage layer can 
 
 ### 5.3 Quantise as a pipeline step
 
-Run quantisation as a Kubernetes Job on the mirrored base model, write the result as a new version, then run the eval suite. Check calibration data for leakage of sensitive text, since calibration samples influence the output model.
+Run quantisation as a Kubernetes Job on the mirrored base model, write the result as a new version, then run the eval suite. Check calibration data for leakage of sensitive text, since calibration samples influence the output model. Optimise for the runtime you will actually serve; an ONNX-first path and a vLLM-first path usually diverge.
 
 ### 5.4 A minimal LoRA job on Kubernetes
 
@@ -199,7 +203,7 @@ Kueue unsuspends the Job when quota is available. The config should pin base mod
 
 ### 5.5 Prepare tuning data
 
-- Version datasets as immutable snapshots and store the digest on the model record.
+- Version datasets as immutable snapshots and store the digest on the model record; DVC or an equivalent manifest-based workflow is a good fit when data lives outside the registry.
 - Clear licence and consent for every source; do not tune on data you could not legally serve in RAG.
 - Remove personal data and secrets. A tuned model can regurgitate training examples.
 - Deduplicate and hold out evaluation data before training; never reuse eval items as training items.
@@ -220,7 +224,7 @@ Serve one base model with several LoRA adapters through vLLM rather than one dep
 | Champion | Canary success; owner sign-off | Replaced by a newer champion |
 | Deprecated | Successor available; notice period announced | No traffic for a set period; then archive |
 
-Traffic splitting uses [P03](./03-model-serving.md) (for example KServe canary) or the gateway in [P02](./02-ai-gateway-routing.md). Keep the previous champion deployed until the new one passes the exit condition. Deprecation needs a published calendar, consumer inventory from usage telemetry ([P07](./07-observability-evaluation.md)) and a migration note. Never delete weights while a rollback may still be required or while audits may need them.
+Traffic splitting uses [P03](./03-model-serving.md) (for example KServe canary) or the gateway in [P02](./02-ai-gateway-routing.md). Keep the previous champion deployed until the new one passes the exit condition. Base-model updates require adapter and quantised-child compatibility re-tests before traffic shifts. Deprecation needs a published calendar, consumer inventory from usage telemetry ([P07](./07-observability-evaluation.md)) and a migration note. Never delete weights while a rollback may still be required or while audits may need them.
 
 ## 6. Operations
 
@@ -229,8 +233,10 @@ Traffic splitting uses [P03](./03-model-serving.md) (for example KServe canary) 
 | Registry drift | Models serving in production that have no registry record |
 | Training queue health | Queue wait time, preemptions, GPU idle time between jobs |
 | Training failures | Out-of-memory errors, checkpoint recovery, node loss in multi-node jobs |
+| Lineage gaps | Training runs with no dataset digest, code commit, seed or container image recorded |
 | Upstream changes | Upstream repo changes licence, deletes a model or republishes weights under the same name |
 | Adapter sprawl | Many adapters with no owner, no traffic or no matching base version |
+| Compatibility drift | A new base or quantised child is promoted without revalidating dependent adapters |
 | Quality drift | Online evals degrading after a base model, quantisation or adapter change |
 | Deprecation debt | Old versions still receiving traffic past their end date |
 | Cost | GPU hours per tuning run, cost per accepted model version |
@@ -240,6 +246,7 @@ Operational habits that pay off:
 - checkpoint training to durable storage so preemption does not lose runs;
 - keep tuning and production serving in separate namespaces and quota pools;
 - re-run the full eval suite on every base model or quantisation change, not only on new adapters;
+- treat upstream model, licence and availability changes as re-approval events;
 - rehearse restoring a previous champion from the registry; and
 - review the model inventory quarterly against [P10](./10-governance-finops.md) policy.
 
@@ -254,12 +261,16 @@ For every model version, store: base model digest, dataset digest, code commit, 
 - **Trusting public leaderboards.** Evaluate on your own tasks.
 - **Quantising without re-evaluating.** Small average losses can hide large losses on specific languages, tools or long contexts.
 - **Pulling weights at pod start.** It breaks reproducibility, mirroring and egress control, and slows cold starts.
+- **Using hub names instead of digests.** Mutable upstream names make rollback and audit evidence weak.
 - **Loading unsafe formats.** Pickle-based checkpoints can execute code; prefer safetensors and scan ([P09](./09-security-safety.md)).
 - **Mismatched adapter and base.** An adapter on a different base revision gives silently wrong output.
+- **Treating DVC, OCI or object storage as the registry.** They hold bytes and manifests; approvals, aliases and rollout state still need a registry record.
 - **No held-out set.** Tuning on eval data inflates results.
 - **Starting pre-training.** It is out of scope; adapt existing models.
 - **Per-team tuning stacks.** Three libraries, three registries and no shared queue lead to wasted GPUs and no lineage.
-- **Archived or unmaintained tools.** AutoAWQ, AutoGPTQ and torchtune are archived or wound down; do not build new pipelines on them.
+- **Optimising for the wrong runtime.** An ONNX-optimised path does not automatically help a vLLM deployment, and vice versa.
+- **Promoting a new base revision without revalidating every adapter and quantised child.** Compatibility drift is easy to miss and hard to debug later.
+- **Archived or unmaintained tools.** AutoAWQ, AutoGPTQ, torchtune and LoRAX are archived or wound down; do not build new pipelines on them.
 
 ## 8. Checklist
 
@@ -275,8 +286,10 @@ For every model version, store: base model digest, dataset digest, code commit, 
 
 - [ ] MLflow (or equivalent) is the registry, with aliases and parent links for adapters and quantised variants.
 - [ ] Tuning and quantisation run as scheduled, containerised jobs with Kueue or equivalent quotas.
+- [ ] Dataset snapshots or manifests are versioned and linked from the registry record.
 - [ ] Every candidate passes the [P08](./08-evaluation-quality.md) regression gate before promotion.
 - [ ] Datasets are versioned, licence-cleared and PII-reviewed.
+- [ ] Adapter and base-model compatibility checks run before serving changes.
 - [ ] Canary and rollback are documented for each model version; the previous champion stays deployed until the new one is proven.
 - [ ] Deprecation calendar and consumer notification exist.
 
@@ -285,18 +298,19 @@ For every model version, store: base model digest, dataset digest, code commit, 
 - [ ] Artifacts are signed and verified at admission ([P09](./09-security-safety.md)); OCI or object storage replicates across regions.
 - [ ] Full lineage links base model, data, code, config, eval and deployment, and feeds [P10](./10-governance-finops.md) audit evidence.
 - [ ] Multi-tenant fair sharing and GPU cost attribution cover tuning jobs.
+- [ ] Base-model changes automatically trigger revalidation of dependent adapters and quantised variants.
 - [ ] Multi-LoRA serving is governed: tenant-to-adapter authorisation, owner per adapter, retirement rules.
 - [ ] Licence changes upstream trigger automated review of dependent models.
 - [ ] Rollback and deprecation drills run regularly.
 
 ## 9. Sources
 
-Repository and licence data were opened on 2026-10-11 via the GitHub API; model licences are secondary-sourced and flagged **Unverified**. Re-check before adoption:
+Repository and licence data were opened on 2026-10-11, with additional GitHub spot-checks on 2026-10-17 for DVC, Olive, LoRAX and lm-evaluation-harness; model licences are secondary-sourced and flagged **Unverified**. Re-check before adoption:
 
 - [MLflow repository](https://github.com/mlflow/mlflow)
-- [Kubeflow Model Registry repository](https://github.com/kubeflow/model-registry)
+- [Kubeflow Model Registry repository](https://github.com/kubeflow/hub)
 - [ModelPack specification](https://github.com/modelpack/model-spec)
-- [KitOps repository](https://github.com/jozu-ai/kitops)
+- [KitOps repository](https://github.com/kitops-ml/kitops)
 - [ORAS repository](https://github.com/oras-project/oras)
 - [llm-compressor repository](https://github.com/vllm-project/llm-compressor)
 - [AutoAWQ repository (archived)](https://github.com/casper-hansen/AutoAWQ)
@@ -306,16 +320,19 @@ Repository and licence data were opened on 2026-10-11 via the GitHub API; model 
 - [llama.cpp repository](https://github.com/ggml-org/llama.cpp)
 - [Unsloth repository](https://github.com/unslothai/unsloth)
 - [Axolotl repository](https://github.com/axolotl-ai-cloud/axolotl)
-- [LLaMA-Factory repository](https://github.com/hiyouga/LLaMA-Factory)
+- [LLaMA-Factory repository](https://github.com/hiyouga/LlamaFactory)
 - [TRL repository](https://github.com/huggingface/trl) and [PEFT repository](https://github.com/huggingface/peft)
-- [torchtune repository](https://github.com/pytorch/torchtune)
+- [torchtune repository](https://github.com/meta-pytorch/torchtune)
 - [NeMo repository](https://github.com/NVIDIA-NeMo/NeMo)
 - [Kubeflow Trainer repository](https://github.com/kubeflow/trainer)
 - [Ray repository](https://github.com/ray-project/ray)
 - [Kueue repository](https://github.com/kubernetes-sigs/kueue)
 - [Volcano repository](https://github.com/volcano-sh/volcano)
-- [NVIDIA KAI Scheduler repository](https://github.com/NVIDIA/KAI-Scheduler)
+- [NVIDIA KAI Scheduler repository](https://github.com/kai-scheduler/KAI-Scheduler)
 - [LoRAX repository](https://github.com/predibase/lorax)
+- [DVC repository](https://github.com/treeverse/dvc) and [`LICENSE`](https://github.com/treeverse/dvc/blob/main/LICENSE)
+- [Olive repository](https://github.com/microsoft/Olive) and [`LICENSE`](https://github.com/microsoft/Olive/blob/main/LICENSE)
+- [lm-evaluation-harness repository](https://github.com/EleutherAI/lm-evaluation-harness)
 - [vLLM repository](https://github.com/vllm-project/vllm)
 - [KServe repository](https://github.com/kserve/kserve)
 - [Distilabel repository](https://github.com/argilla-io/distilabel)

@@ -35,7 +35,7 @@ curl http://localhost:4000/v1/chat/completions \
   -d '{"model":"chat","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-`$LITELLM_MASTER_KEY` is in `.env`. Any OpenAI SDK works with `base_url=http://localhost:4000/v1`. To add a commercial provider, set its key in `.env` and uncomment the model in `config/litellm.yaml`.
+`LITELLM_MASTER_KEY` is in `.env`. Any OpenAI SDK works with `base_url=http://localhost:4000/v1` and that key as the API key. `./deploy.sh test` uses the generated key automatically. To add a commercial provider, set its key in `.env` and uncomment the model in `config/litellm.yaml`.
 
 ## Scope
 
