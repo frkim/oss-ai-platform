@@ -101,7 +101,7 @@ psTest('up creates secrets, uses the Windows override, pulls models and checks r
     assert.ok(!call.arguments.includes('ollama'));
   }
   assert.deepStrictEqual(compose[0].arguments.slice(7), ['up', '-d']);
-  assert.ok(compose[1].arguments.includes('http://host.docker.internal:11434/api/tags'));
+  assert.strictEqual(compose[1].arguments.at(-1), 'http://host.docker.internal:11434/api/tags');
   assert.deepStrictEqual(result.calls.filter((c) => c.kind === 'http').map((c) => c.body), [
     { name: 'llama3.2:3b', stream: false }, { name: 'nomic-embed-text', stream: false }
   ]);
@@ -160,7 +160,7 @@ psTest('model discovery supports quoted models, ignores comments and deduplicate
   const pulls = result.calls.filter((c) => c.kind === 'http');
   assert.deepStrictEqual(pulls.map((c) => c.body.name), ['custom:tag', 'embedding']);
   assert.ok(pulls.every((c) => c.uri === 'http://localhost:11435/api/pull'));
-  assert.ok(composeCalls(result)[1].arguments.includes('http://host.docker.internal:11435/api/tags'));
+  assert.strictEqual(composeCalls(result)[1].arguments.at(-1), 'http://host.docker.internal:11435/api/tags');
 });
 
 psTest('down, logs and reset use the override and reset requires exact confirmation', (t) => {
