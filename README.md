@@ -39,7 +39,7 @@ Supporting documents:
 
 ## Run it
 
-[`oss-package/`](./oss-package) deploys a laptop-sized slice of the platform with one command (`./deploy.sh up`): gateway, serving, vector store, observability and chat UI.
+[`oss-package/`](./oss-package) deploys a laptop-sized slice of the platform with one command (`./deploy.sh up`, or `.\deploy.ps1 up` on Windows): gateway, serving, vector store, observability and chat UI. The [Windows setup](./oss-package/README.md#windows--powershell-without-wsl) uses Docker Desktop with Hyper-V and native Ollama, without WSL.
 
 ## How to read it
 
