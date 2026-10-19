@@ -1,0 +1,12 @@
+# Docker Desktop Linux containers on Hyper-V; inference runs on the Windows host.
+# Requires Compose 2.24.4 or newer for !override.
+services:
+  ollama:
+    profiles: ["container-ollama"]
+
+  litellm:
+    environment:
+      OLLAMA_API_BASE: http://host.docker.internal:${OLLAMA_PORT:-11434}
+    depends_on: !override
+      postgres:
+        condition: service_healthy
